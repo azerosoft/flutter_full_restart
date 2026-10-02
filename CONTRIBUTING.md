@@ -30,6 +30,8 @@ flutter test
 (cd example && flutter test)
 ```
 
+CI also builds the example for every platform, once with Flutter 3.22.3 and once with the latest stable release. The example's platform folders come from the latest Flutter template, so the 3.22.3 jobs first recreate them with `.github/scripts/recreate_example_platform.sh`.
+
 Try your change in the example app on the platforms it affects:
 
 ```sh

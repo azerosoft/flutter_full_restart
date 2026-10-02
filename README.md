@@ -46,6 +46,7 @@ await FullRestart.restart(wipeData: true, keepPreferences: true);
 - [Platform setup](#platform-setup)
 - [Troubleshooting](#troubleshooting)
 - [Example app](#example-app)
+- [Tested with](#tested-with)
 - [Contributing](#contributing)
 - [About Azerosoft](#about-azerosoft)
 
@@ -314,16 +315,84 @@ flutter run
 
 ## Tested with
 
-| Platform | Tested with |
-|----------|-------------|
-| Flutter | 3.22.3 and 3.47 |
-| Android | AGP 7.3, 8.11 and 9.1 |
-| iOS | Xcode 27, Swift Package Manager and CocoaPods |
-| macOS | macOS 27, Swift Package Manager and CocoaPods, with and without App Sandbox |
-| Windows | Windows Server 2025, Visual Studio 2022 Build Tools |
-| Linux | Ubuntu 24.04 (arm64) |
+The minimum and maximum versions this package was tested with, as of October 2026. Versions in between were not all tested one by one, but they are expected to work as well. On every push, [GitHub Actions](https://github.com/azerosoft/flutter_full_restart/actions/workflows/ci.yml) runs the tests and builds the example for all platforms, once with Flutter 3.22.3 and once with the latest stable release.
 
-Every push runs analysis, tests and example builds for all platforms on [GitHub Actions](https://github.com/azerosoft/flutter_full_restart/actions/workflows/ci.yml).
+### Flutter and Dart
+
+| | Minimum | Maximum |
+|-|--------|--------|
+| Flutter | 3.22.3 | 3.47.6 |
+| Dart | 3.4.4 | 3.13.5 |
+
+### Android
+
+| | Minimum | Maximum |
+|-|--------|--------|
+| Android Gradle Plugin | 7.3.0 | 9.1.0 |
+| Gradle | 7.6.3 | 9.3.1 |
+| Kotlin (app) | 1.7.10 | 2.4.0 |
+| JDK | 17 | 17 |
+| `compileSdk` | 34 | 36 |
+| `minSdk` (app) | 21 | 24 |
+
+### iOS
+
+| | Minimum | Maximum |
+|-|--------|--------|
+| Xcode | 16.4 | 27.0 |
+| iOS SDK | 18.5 | 27.0 |
+| Deployment target | 12.0 | 15.0 |
+| CocoaPods | 1.16.2 | 1.17.0 |
+| Xcode with Swift Package Manager | 26.6 | 27.0 |
+
+### macOS
+
+| | Minimum | Maximum |
+|-|--------|--------|
+| macOS | 15.7 | 27.0 |
+| Xcode | 16.4 | 27.0 |
+| macOS SDK | 15.5 | 27.0 |
+| Deployment target | 10.14 | 12.0 |
+| CocoaPods | 1.16.2 | 1.17.0 |
+| Xcode with Swift Package Manager | 26.6 | 27.0 |
+
+### Windows
+
+| | Minimum | Maximum |
+|-|--------|--------|
+| Windows | Server 2022 | Server 2025 |
+| Visual Studio | 2022 (17.14) | 2026 (18.10) |
+| CMake | 3.31.6 | 4.4.3 |
+
+### Linux
+
+| | Minimum | Maximum |
+|-|--------|--------|
+| Ubuntu | 24.04 | 24.04 |
+| GTK | 3.24.41 | 3.24.41 |
+| Clang | 18 | 18 |
+| CMake | 3.31.6 | 3.31.6 |
+
+### Web
+
+| | Minimum | Maximum |
+|-|--------|--------|
+| Build | JavaScript and WebAssembly | JavaScript and WebAssembly |
+
+### Tried by hand
+
+The example app was also started on these systems and the restarts were tried by hand:
+
+| Platform | System |
+|----------|--------|
+| Android | Android API 37.2 emulator (Pixel 10) |
+| iOS | iOS 27.0 simulator (iPhone 17) |
+| macOS | macOS 27.0, with and without App Sandbox |
+| Windows | Windows Server 2025 |
+| Linux | Ubuntu 24.04 (arm64) |
+| Web | Chromium 152 (WebAssembly build) |
+
+The Windows and Linux C++ unit tests also run on every push, on Windows Server 2022 and 2025 and on Ubuntu 24.04 (x64).
 
 ## Contributing
 
