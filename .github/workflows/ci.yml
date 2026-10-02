@@ -47,24 +47,36 @@ jobs:
         working-directory: example
 
   ios:
-    name: Build iOS example (Swift Package Manager)
+    name: Build iOS example (${{ matrix.dependencies }})
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dependencies: [Swift Package Manager, CocoaPods]
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+      - run: flutter config --no-enable-swift-package-manager
+        if: matrix.dependencies == 'CocoaPods'
       - run: flutter build ios --simulator --debug
         working-directory: example
 
   macos:
-    name: Build macOS example (Swift Package Manager)
+    name: Build macOS example (${{ matrix.dependencies }})
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dependencies: [Swift Package Manager, CocoaPods]
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+      - run: flutter config --no-enable-swift-package-manager
+        if: matrix.dependencies == 'CocoaPods'
       - run: flutter build macos --debug
         working-directory: example
 
