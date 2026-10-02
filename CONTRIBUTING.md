@@ -66,15 +66,28 @@ flutter build linux --debug     # then run build/linux/<arch>/debug/plugins/flut
 - Never delete data outside the app's own folders. Shared locations (Documents, temp folders, shared keychains) must stay untouched.
 - Add or update tests for every change in behaviour.
 - Keep `flutter analyze` free of issues and the code formatted with `dart format`.
-- Update `README.md` for user-facing changes and add an entry to `CHANGELOG.md`.
-- Write commit messages in the [Conventional Commits](https://www.conventionalcommits.org) style, for example `fix(android): keep databases when keepPreferences is set`.
+- Update `README.md` for user-facing changes. `CHANGELOG.md` is written from the commit messages when a version is released, so don't edit it by hand.
+- Write commit messages in the [Conventional Commits](https://www.conventionalcommits.org) style, for example `fix(android): keep databases when keepPreferences is set`. They decide the next version, see [Releasing](#releasing).
 
 ## Pull request checklist
 
 - [ ] The change is covered by tests.
 - [ ] `flutter analyze` reports no issues and the code is formatted.
-- [ ] README and CHANGELOG are updated where needed.
+- [ ] README is updated where needed.
 - [ ] The change was tried on the platforms it affects.
+
+## Releasing
+
+Releases are made with [release-please](https://github.com/googleapis/release-please). The commit messages since the last release decide the next version:
+
+| Commit message | Version after 1.2.3 |
+|----------------|---------------------|
+| `fix: ...` | 1.2.4 |
+| `feat: ...` | 1.3.0 |
+| `feat!: ...`, or a `BREAKING CHANGE:` footer | 2.0.0 |
+| `docs:`, `ci:`, `test:`, `refactor:`, `chore:` | no new version |
+
+After CI passes on `main`, release-please opens a release pull request, or updates the one that is already open, with the new version in `pubspec.yaml` and the new `CHANGELOG.md` entry. Nothing is released until that pull request is merged. Merging it creates the `vX.Y.Z` tag and the GitHub release, and the package is then published to pub.dev.
 
 ## License
 

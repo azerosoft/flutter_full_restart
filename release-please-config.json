@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "dart",
+  "include-component-in-tag": false,
+  "bootstrap-sha": "96bd17a1ac25eeb8ad7bed3accc2ad640ce262c1",
+  "packages": {
+    ".": {
+      "package-name": "flutter_full_restart",
+      "changelog-path": "CHANGELOG.md"
+    }
+  }
+}

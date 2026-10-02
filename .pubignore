@@ -25,8 +25,10 @@ migrate_working_dir/
 /build/
 /coverage/
 
-# Repository-only files: GitHub configuration and README artwork, which the
-# README loads from GitHub.
+# Repository-only files: GitHub configuration, README artwork (which the
+# README loads from GitHub) and the release-please setup.
 /.github/
 /.editorconfig
 /.gitattributes
+/.release-please-manifest.json
+/release-please-config.json
