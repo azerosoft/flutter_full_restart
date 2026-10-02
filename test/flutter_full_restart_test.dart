@@ -1,0 +1,208 @@
+// flutter_full_restart by Azerosoft (https://azerosoft.com)
+// Licensed under the MIT License. See the LICENSE file for details.
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_full_restart/flutter_full_restart.dart';
+import 'package:flutter_full_restart/src/method_channel_full_restart.dart';
+import 'package:flutter_full_restart/src/protocol.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  final List<MethodCall> calls = <MethodCall>[];
+  Object? Function(MethodCall call) reply = (_) => true;
+
+  setUp(() {
+    calls.clear();
+    reply = (_) => true;
+    FullRestartPlatform.instance = MethodChannelFullRestart();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(MethodChannelFullRestart.channel,
+            (MethodCall call) async {
+      calls.add(call);
+      return reply(call);
+    });
+  });
+
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(MethodChannelFullRestart.channel, null);
+  });
+
+  /// Simulates the native side asking Dart to rebuild its widget tree.
+  Future<void> sendRebuildSignal() async {
+    await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .handlePlatformMessage(
+      kSignalChannel,
+      const StandardMethodCodec()
+          .encodeMethodCall(const MethodCall(kRebuildWidgetTreeSignal)),
+      (_) {},
+    );
+  }
+
+  group('FullRestart.restart', () {
+    test('defaults to a full restart without wiping data', () async {
+      expect(await FullRestart.restart(), isTrue);
+
+      expect(calls, hasLength(1));
+      expect(calls.single.method, 'restart');
+      expect(calls.single.arguments, <String, bool>{
+        'killProcess': true,
+        'wipeData': false,
+        'keepSecureStorage': false,
+        'keepPreferences': false,
+      });
+    });
+
+    test('forwards every option', () async {
+      final bool accepted = await FullRestart.restart(
+        type: RestartType.ui,
+        wipeData: true,
+        keepSecureStorage: true,
+        keepPreferences: true,
+      );
+
+      expect(accepted, isTrue);
+      expect(calls.single.arguments, <String, bool>{
+        'killProcess': false,
+        'wipeData': true,
+        'keepSecureStorage': true,
+        'keepPreferences': true,
+      });
+    });
+
+    test('returns false when the platform throws', () async {
+      reply = (_) => throw PlatformException(code: 'NO_ACTIVITY');
+
+      expect(await FullRestart.restart(), isFalse);
+    });
+
+    test('returns false when the platform replies with null', () async {
+      reply = (_) => null;
+
+      expect(await FullRestart.restart(), isFalse);
+    });
+
+    test('uses the registered platform implementation', () async {
+      final _FakePlatform fake = _FakePlatform();
+      FullRestartPlatform.instance = fake;
+
+      expect(await FullRestart.restart(wipeData: true), isTrue);
+      expect(fake.killProcess, isTrue);
+      expect(fake.wipeData, isTrue);
+      expect(calls, isEmpty);
+    });
+  });
+
+  group('FullRestart.confirmAndRestart', () {
+    Future<Future<bool>> openDialog(WidgetTester tester) async {
+      late BuildContext context;
+      await tester.pumpWidget(MaterialApp(
+        home: Builder(builder: (BuildContext c) {
+          context = c;
+          return const SizedBox();
+        }),
+      ));
+      final Future<bool> result = FullRestart.confirmAndRestart(
+        context,
+        title: 'Apply update?',
+        confirmLabel: 'Yes',
+        cancelLabel: 'No',
+        type: RestartType.ui,
+      );
+      await tester.pumpAndSettle();
+      return result;
+    }
+
+    testWidgets('restarts when the user confirms', (WidgetTester tester) async {
+      final Future<bool> result = await openDialog(tester);
+      expect(find.text('Apply update?'), findsOneWidget);
+
+      await tester.tap(find.text('Yes'));
+      await tester.pumpAndSettle();
+
+      expect(await result, isTrue);
+      expect(calls.single.arguments, containsPair('killProcess', false));
+    });
+
+    testWidgets('does nothing when the user cancels',
+        (WidgetTester tester) async {
+      final Future<bool> result = await openDialog(tester);
+
+      await tester.tap(find.text('No'));
+      await tester.pumpAndSettle();
+
+      expect(await result, isFalse);
+      expect(calls, isEmpty);
+    });
+  });
+
+  group('FullRestartScope', () {
+    testWidgets('rebuilds its subtree from scratch on a rebuild signal',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(const FullRestartScope(child: _Counter()));
+      await tester.tap(find.byType(_Counter));
+      await tester.pump();
+      expect(find.text('1'), findsOneWidget);
+
+      await sendRebuildSignal();
+      await tester.pump();
+
+      expect(find.text('0'), findsOneWidget);
+    });
+
+    // Registers a global callback, so it must stay the last test.
+    testWidgets('calls onUiRestart instead of rebuilding when provided',
+        (WidgetTester tester) async {
+      int callbacks = 0;
+      FullRestart.ensureInitialized(onUiRestart: () => callbacks++);
+      await tester.pumpWidget(const FullRestartScope(child: _Counter()));
+      await tester.tap(find.byType(_Counter));
+      await tester.pump();
+
+      await sendRebuildSignal();
+      await tester.pump();
+
+      expect(callbacks, 1);
+      expect(find.text('1'), findsOneWidget);
+    });
+  });
+}
+
+class _FakePlatform extends FullRestartPlatform {
+  bool? killProcess;
+  bool? wipeData;
+
+  @override
+  Future<bool> restart({
+    required bool killProcess,
+    required bool wipeData,
+    required bool keepSecureStorage,
+    required bool keepPreferences,
+  }) async {
+    this.killProcess = killProcess;
+    this.wipeData = wipeData;
+    return true;
+  }
+}
+
+class _Counter extends StatefulWidget {
+  const _Counter();
+
+  @override
+  State<_Counter> createState() => _CounterState();
+}
+
+class _CounterState extends State<_Counter> {
+  int _taps = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => setState(() => _taps++),
+      child: Text('$_taps', textDirection: TextDirection.ltr),
+    );
+  }
+}

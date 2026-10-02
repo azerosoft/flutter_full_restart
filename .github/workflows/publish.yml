@@ -1,0 +1,24 @@
+# Publishes to pub.dev when a tag like v1.0.1 is pushed.
+# One-time setup: pub.dev > flutter_full_restart > Admin > Automated publishing >
+# enable GitHub Actions, repository "azerosoft/flutter_full_restart",
+# tag pattern "v{{version}}".
+name: Publish to pub.dev
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: flutter pub publish --force

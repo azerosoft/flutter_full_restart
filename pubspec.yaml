@@ -1,0 +1,59 @@
+name: flutter_full_restart
+description: >-
+  Restart or relaunch a Flutter app: full process or UI-only restart, optional
+  data wipe, confirm dialog. Android, iOS, macOS, Web, Windows, Linux. Swift
+  Package Manager ready.
+version: 1.0.0
+homepage: https://azerosoft.com
+repository: https://github.com/azerosoft/flutter_full_restart
+issue_tracker: https://github.com/azerosoft/flutter_full_restart/issues
+
+topics:
+  - restart
+  - relaunch
+  - app-lifecycle
+  - data-clearing
+  - swift-package-manager
+
+screenshots:
+  - description: flutter_full_restart by Azerosoft. Full and UI-only app restarts with optional data wipe, on every platform.
+    path: doc/screenshots/cover.webp
+  - description: UI restart, full restart and data wipe in the example app on iOS.
+    path: doc/screenshots/ios.webp
+  - description: UI restart, full restart and data wipe in the example app on Android.
+    path: doc/screenshots/android.webp
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+  flutter: '>=3.22.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+  plugin_platform_interface: ^2.1.7
+  web: ^1.0.0
+
+dev_dependencies:
+  flutter_lints: '>=4.0.0 <7.0.0'
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.azerosoft.flutter_full_restart
+        pluginClass: FlutterFullRestartPlugin
+      ios:
+        pluginClass: FlutterFullRestartPlugin
+      linux:
+        pluginClass: FlutterFullRestartPlugin
+      macos:
+        pluginClass: FlutterFullRestartPlugin
+      web:
+        pluginClass: FlutterFullRestartWeb
+        fileName: flutter_full_restart_web.dart
+      windows:
+        pluginClass: FlutterFullRestartPluginCApi
