@@ -1,14 +1,12 @@
 # Publishes to pub.dev from a tag like v1.0.1. The release workflow starts it
-# on the tag it creates; pushing such a tag by hand works too.
+# on the tag it creates. To publish a tag by hand, run it from the Actions tab
+# and pick the tag.
 # One-time setup: pub.dev > flutter_full_restart > Admin > Automated publishing >
-# enable GitHub Actions with push and workflow_dispatch events, repository
+# enable GitHub Actions with workflow_dispatch events, repository
 # "azerosoft/flutter_full_restart", tag pattern "v{{version}}".
 name: Publish to pub.dev
 
 on:
-  push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+*'
   workflow_dispatch:
 
 jobs:

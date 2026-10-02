@@ -11,8 +11,6 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
-  pull-requests: write
   actions: write
 
 jobs:
@@ -20,13 +18,20 @@ jobs:
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
     steps:
+      # release-please works as the Azerosoft release bot. Pull requests opened
+      # with the default workflow token need a maintainer's approval before CI
+      # runs on them; the bot's pull requests do not.
+      - uses: actions/create-github-app-token@v3
+        id: bot
+        with:
+          client-id: ${{ vars.RELEASE_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
       - uses: googleapis/release-please-action@v5
         id: release
         with:
+          token: ${{ steps.bot.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-      # Tags created with the workflow token do not start other workflows, so
-      # the publish workflow is started on the new tag directly.
       - if: steps.release.outputs.release_created
         run: gh workflow run publish.yml --repo "$GITHUB_REPOSITORY" --ref "$TAG"
         env:
