@@ -1,3 +1,12 @@
+# Changelog
+
+## [1.0.1](https://github.com/azerosoft/flutter_full_restart/compare/v1.0.0...v1.0.1) (2026-10-02)
+
+
+### Documentation
+
+* list the tested Flutter, Dart and platform versions ([a2e08e3](https://github.com/azerosoft/flutter_full_restart/commit/a2e08e354b591c24fb70416096ec028dbdcb76ec))
+
 ## 1.0.0
 
 Initial release.
