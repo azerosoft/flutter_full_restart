@@ -66,11 +66,12 @@ if (${include_${PROJECT_NAME}_tests})
 set(TEST_RUNNER "${PROJECT_NAME}_test")
 enable_testing()
 
-# Add the Google Test dependency.
+# Add the Google Test dependency. 1.16.0 configures with CMake 4 and is the
+# last release that still supports C++14, which Flutter uses on Linux.
 include(FetchContent)
 FetchContent_Declare(
   googletest
-  URL https://github.com/google/googletest/archive/release-1.11.0.zip
+  URL https://github.com/google/googletest/archive/refs/tags/v1.16.0.zip
 )
 # Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
