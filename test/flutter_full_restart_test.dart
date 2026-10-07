@@ -43,34 +43,18 @@ void main() {
   }
 
   group('FullRestart.restart', () {
-    test('defaults to a full restart without wiping data', () async {
+    test('defaults to a full restart', () async {
       expect(await FullRestart.restart(), isTrue);
 
       expect(calls, hasLength(1));
       expect(calls.single.method, 'restart');
-      expect(calls.single.arguments, <String, bool>{
-        'killProcess': true,
-        'wipeData': false,
-        'keepSecureStorage': false,
-        'keepPreferences': false,
-      });
+      expect(calls.single.arguments, <String, bool>{'killProcess': true});
     });
 
-    test('forwards every option', () async {
-      final bool accepted = await FullRestart.restart(
-        type: RestartType.ui,
-        wipeData: true,
-        keepSecureStorage: true,
-        keepPreferences: true,
-      );
+    test('keeps the process for a UI restart', () async {
+      expect(await FullRestart.restart(type: RestartType.ui), isTrue);
 
-      expect(accepted, isTrue);
-      expect(calls.single.arguments, <String, bool>{
-        'killProcess': false,
-        'wipeData': true,
-        'keepSecureStorage': true,
-        'keepPreferences': true,
-      });
+      expect(calls.single.arguments, <String, bool>{'killProcess': false});
     });
 
     test('returns false when the platform throws', () async {
@@ -89,52 +73,8 @@ void main() {
       final _FakePlatform fake = _FakePlatform();
       FullRestartPlatform.instance = fake;
 
-      expect(await FullRestart.restart(wipeData: true), isTrue);
+      expect(await FullRestart.restart(), isTrue);
       expect(fake.killProcess, isTrue);
-      expect(fake.wipeData, isTrue);
-      expect(calls, isEmpty);
-    });
-  });
-
-  group('FullRestart.confirmAndRestart', () {
-    Future<Future<bool>> openDialog(WidgetTester tester) async {
-      late BuildContext context;
-      await tester.pumpWidget(MaterialApp(
-        home: Builder(builder: (BuildContext c) {
-          context = c;
-          return const SizedBox();
-        }),
-      ));
-      final Future<bool> result = FullRestart.confirmAndRestart(
-        context,
-        title: 'Apply update?',
-        confirmLabel: 'Yes',
-        cancelLabel: 'No',
-        type: RestartType.ui,
-      );
-      await tester.pumpAndSettle();
-      return result;
-    }
-
-    testWidgets('restarts when the user confirms', (WidgetTester tester) async {
-      final Future<bool> result = await openDialog(tester);
-      expect(find.text('Apply update?'), findsOneWidget);
-
-      await tester.tap(find.text('Yes'));
-      await tester.pumpAndSettle();
-
-      expect(await result, isTrue);
-      expect(calls.single.arguments, containsPair('killProcess', false));
-    });
-
-    testWidgets('does nothing when the user cancels',
-        (WidgetTester tester) async {
-      final Future<bool> result = await openDialog(tester);
-
-      await tester.tap(find.text('No'));
-      await tester.pumpAndSettle();
-
-      expect(await result, isFalse);
       expect(calls, isEmpty);
     });
   });
@@ -173,17 +113,10 @@ void main() {
 
 class _FakePlatform extends FullRestartPlatform {
   bool? killProcess;
-  bool? wipeData;
 
   @override
-  Future<bool> restart({
-    required bool killProcess,
-    required bool wipeData,
-    required bool keepSecureStorage,
-    required bool keepPreferences,
-  }) async {
+  Future<bool> restart({required bool killProcess}) async {
     this.killProcess = killProcess;
-    this.wipeData = wipeData;
     return true;
   }
 }

@@ -3,7 +3,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_full_restart/flutter_full_restart.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 /// Set once per Dart isolate: changes after a full restart (and after a UI
 /// restart on Android, which boots a new Flutter engine).
@@ -26,14 +25,14 @@ class DemoApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Full Restart',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: azerosoftBlue).copyWith(
+      theme: _theme(
+        ColorScheme.fromSeed(seedColor: azerosoftBlue).copyWith(
           primary: azerosoftBlue,
           onPrimary: Colors.white,
         ),
       ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
+      darkTheme: _theme(
+        ColorScheme.fromSeed(
           seedColor: azerosoftBlue,
           brightness: Brightness.dark,
         ).copyWith(
@@ -42,6 +41,22 @@ class DemoApp extends StatelessWidget {
         ),
       ),
       home: const DemoPage(),
+    );
+  }
+
+  /// Large buttons and text, so the app stays readable in small screenshots.
+  static ThemeData _theme(ColorScheme colors) {
+    const TextStyle label =
+        TextStyle(fontSize: 20, fontWeight: FontWeight.w600);
+    const Size minimumSize = Size(64, 64);
+    return ThemeData(
+      colorScheme: colors,
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: minimumSize,
+          textStyle: label,
+        ),
+      ),
     );
   }
 }
@@ -54,149 +69,151 @@ class DemoPage extends StatefulWidget {
 }
 
 class _DemoPageState extends State<DemoPage> {
-  static const String _savedTapsKey = 'saved_taps';
-
   /// Set when this State is created: changes after any kind of restart.
   final DateTime _screenBuiltAt = DateTime.now();
 
-  int _memoryTaps = 0;
-  int _savedTaps = 0;
-  bool _wipeData = false;
-  bool _keepPreferences = false;
-  bool _keepSecureStorage = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSavedTaps();
-  }
-
-  Future<void> _loadSavedTaps() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-    setState(() => _savedTaps = prefs.getInt(_savedTapsKey) ?? 0);
-  }
-
-  Future<void> _tap() async {
-    setState(() {
-      _memoryTaps++;
-      _savedTaps++;
-    });
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_savedTapsKey, _savedTaps);
-  }
-
   Future<void> _restart(RestartType type) async {
-    final bool accepted = await FullRestart.restart(
-      type: type,
-      wipeData: _wipeData,
-      keepPreferences: _keepPreferences,
-      keepSecureStorage: _keepSecureStorage,
-    );
-    _reportIfRejected(accepted);
-  }
-
-  Future<void> _confirmAndRestart() async {
-    final bool accepted = await FullRestart.confirmAndRestart(
-      context,
-      title: 'Restart the app?',
-      message: 'Unsaved changes will be lost.',
-      wipeData: _wipeData,
-      keepPreferences: _keepPreferences,
-      keepSecureStorage: _keepSecureStorage,
-    );
-    _reportIfRejected(accepted);
-  }
-
-  void _reportIfRejected(bool accepted) {
+    final bool accepted = await FullRestart.restart(type: type);
     if (accepted || !mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Restart was cancelled or not possible.')),
+      const SnackBar(content: Text('The restart could not be started.')),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final TextTheme text = Theme.of(context).textTheme;
+    final ColorScheme colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Flutter Full Restart')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: <Widget>[
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Text('What survives a restart?', style: text.titleMedium),
-                  const SizedBox(height: 12),
-                  _InfoRow('Dart session started', _clock(sessionStartedAt)),
-                  _InfoRow('This screen built', _clock(_screenBuiltAt)),
-                  _InfoRow('Taps kept in memory', '$_memoryTaps'),
-                  _InfoRow('Taps saved to disk', '$_savedTaps'),
-                  const SizedBox(height: 12),
-                  FilledButton.tonalIcon(
-                    onPressed: _tap,
-                    icon: const Icon(Icons.touch_app),
-                    label: const Text('Tap'),
+                  Text(
+                    'flutter_full_restart',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: colors.primary,
+                    ),
                   ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'What survives\na restart?',
+                    style: TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w700,
+                      height: 1.15,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  _TimeTile(
+                    icon: Icons.memory,
+                    label: 'Dart session started',
+                    time: sessionStartedAt,
+                    highlight: true,
+                  ),
+                  const SizedBox(height: 14),
+                  _TimeTile(
+                    icon: Icons.widgets_outlined,
+                    label: 'Screen built',
+                    time: _screenBuiltAt,
+                  ),
+                  const SizedBox(height: 32),
+                  FilledButton.icon(
+                    onPressed: () => _restart(RestartType.ui),
+                    icon: const Icon(Icons.refresh, size: 26),
+                    label: const Text('UI restart'),
+                  ),
+                  const SizedBox(height: 14),
+                  FilledButton.icon(
+                    onPressed: () => _restart(RestartType.full),
+                    icon: const Icon(Icons.power_settings_new, size: 26),
+                    label: const Text('Full restart'),
+                  ),
+                  const SizedBox(height: 28),
+                  const _MadeByAzerosoft(),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          Card(
-            child: Column(
+        ),
+      ),
+    );
+  }
+}
+
+/// A clock time with a label, e.g. when the Dart session started.
+class _TimeTile extends StatelessWidget {
+  const _TimeTile({
+    required this.icon,
+    required this.label,
+    required this.time,
+    this.highlight = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final DateTime time;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final Color labelColor =
+        highlight ? colors.onPrimaryContainer : colors.onSurfaceVariant;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color:
+            highlight ? colors.primaryContainer : colors.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
               children: <Widget>[
-                SwitchListTile(
-                  title: const Text('Wipe data'),
-                  subtitle: const Text('Delete files, databases and caches'),
-                  value: _wipeData,
-                  onChanged: (bool value) => setState(() => _wipeData = value),
-                ),
-                SwitchListTile(
-                  title: const Text('Keep preferences'),
-                  subtitle: const Text('SharedPreferences / UserDefaults'),
-                  value: _keepPreferences,
-                  onChanged: _wipeData
-                      ? (bool value) => setState(() => _keepPreferences = value)
-                      : null,
-                ),
-                SwitchListTile(
-                  title: const Text('Keep secure storage'),
-                  subtitle: const Text('Keychain on iOS'),
-                  value: _keepSecureStorage,
-                  onChanged: _wipeData
-                      ? (bool value) =>
-                          setState(() => _keepSecureStorage = value)
-                      : null,
+                Icon(icon, size: 24, color: labelColor),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w600,
+                      color: labelColor,
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: () => _restart(RestartType.ui),
-            icon: const Icon(Icons.refresh),
-            label: const Text('UI restart'),
-          ),
-          const SizedBox(height: 8),
-          FilledButton.icon(
-            onPressed: () => _restart(RestartType.full),
-            icon: const Icon(Icons.power_settings_new),
-            label: const Text('Full restart'),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: _confirmAndRestart,
-            icon: const Icon(Icons.help_outline),
-            label: const Text('Full restart with confirmation'),
-          ),
-          const SizedBox(height: 32),
-          const _MadeByAzerosoft(),
-        ],
+            const SizedBox(height: 4),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                _clock(time),
+                style: TextStyle(
+                  fontSize: 60,
+                  fontWeight: FontWeight.w700,
+                  height: 1.15,
+                  color: highlight ? colors.primary : colors.onSurface,
+                  fontFeatures: const <FontFeature>[
+                    FontFeature.tabularFigures(),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -207,58 +224,42 @@ class _DemoPageState extends State<DemoPage> {
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow(this.label, this.value);
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: <Widget>[
-          Expanded(child: Text(label)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
-  }
-}
-
 /// "by Azerosoft" signature with the Azerosoft mark.
 class _MadeByAzerosoft extends StatelessWidget {
   const _MadeByAzerosoft();
 
   @override
   Widget build(BuildContext context) {
-    final TextStyle? style = Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        );
+    final TextStyle style = TextStyle(
+      fontSize: 15,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    );
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
         Container(
-          width: 20,
-          height: 20,
+          width: 24,
+          height: 24,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: azerosoftBlue,
-            borderRadius: BorderRadius.circular(5),
+            borderRadius: BorderRadius.circular(6),
           ),
           child: const Text(
             'a.',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: FontWeight.w700,
               height: 1,
             ),
           ),
         ),
         const SizedBox(width: 8),
-        Text('flutter_full_restart by Azerosoft · azerosoft.com', style: style),
+        Flexible(
+          child: Text('by Azerosoft · azerosoft.com',
+              overflow: TextOverflow.ellipsis, style: style),
+        ),
       ],
     );
   }

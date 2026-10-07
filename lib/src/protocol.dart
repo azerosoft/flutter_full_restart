@@ -20,12 +20,3 @@ const String kRebuildWidgetTreeSignal = 'rebuildWidgetTree';
 
 /// Argument of [kRestartMethod]: `true` for a full restart.
 const String kKillProcessArg = 'killProcess';
-
-/// Argument of [kRestartMethod]: delete app data before restarting.
-const String kWipeDataArg = 'wipeData';
-
-/// Argument of [kRestartMethod]: keep secure storage when wiping.
-const String kKeepSecureStorageArg = 'keepSecureStorage';
-
-/// Argument of [kRestartMethod]: keep preferences when wiping.
-const String kKeepPreferencesArg = 'keepPreferences';

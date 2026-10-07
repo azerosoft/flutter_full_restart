@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#F6F7F9",
     "theme_color": "#2C55F0",
-    "description": "flutter_full_restart example by Azerosoft: full and UI-only restarts with optional data wipe.",
+    "description": "flutter_full_restart example by Azerosoft: full and UI-only restarts.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

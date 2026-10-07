@@ -20,18 +20,19 @@
 
 ---
 
-`flutter_full_restart` restarts your app the way a user would by closing and reopening it, or rebuilds just the UI in place. It can wipe app data on the way, which makes logout, account switching and "reset app" flows a single call.
+`flutter_full_restart` restarts your app the way a user would by closing and reopening it, or rebuilds just the UI in place.
 
 ```dart
-await FullRestart.restart(wipeData: true, keepPreferences: true);
+await FullRestart.restart();                     // kill the process and cold-start the app
+await FullRestart.restart(type: RestartType.ui); // rebuild the UI in place
 ```
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/azerosoft/flutter_full_restart/main/.github/assets/demo-ios.webp" alt="UI restart, full restart and data wipe on iOS" width="300">
-  <img src="https://raw.githubusercontent.com/azerosoft/flutter_full_restart/main/.github/assets/demo-android.webp" alt="UI restart, full restart and data wipe on Android" width="300">
+  <img src="https://raw.githubusercontent.com/azerosoft/flutter_full_restart/main/.github/assets/demo-ios.webp" alt="UI restart and full restart on iOS" width="300">
+  <img src="https://raw.githubusercontent.com/azerosoft/flutter_full_restart/main/.github/assets/demo-android.webp" alt="UI restart and full restart on Android" width="300">
 </p>
 
-<p align="center"><sub>UI restart, full restart and data wipe in the example app on iOS and Android.</sub></p>
+<p align="center"><sub>UI restart and full restart in the example app on iOS and Android.</sub></p>
 
 ## Contents
 
@@ -54,8 +55,6 @@ await FullRestart.restart(wipeData: true, keepPreferences: true);
 
 - **Full restart.** Kills the process and cold-starts the app, exactly like closing and reopening it.
 - **UI restart.** Keeps the process and rebuilds the whole widget tree from scratch, for example after a language or theme change.
-- **Safe data wipe.** Deletes the app's files, caches, databases, preferences, keychain items and cookies, with switches to keep preferences or secure storage. Folders shared with the user or other apps are never touched.
-- **Confirmation dialog.** One call that asks the user before restarting.
 - **Every platform.** Android, iOS, macOS, Web (including WebAssembly), Windows and Linux.
 - **Swift Package Manager ready.** iOS and macOS work with Swift Package Manager and CocoaPods, privacy manifest included.
 - **Never throws.** Every call returns `true` or `false`, so a failed restart never crashes your app.
@@ -66,10 +65,9 @@ await FullRestart.restart(wipeData: true, keepPreferences: true);
 |-----------------------|:-------:|:---:|:-----:|:---:|:-------:|:-----:|
 | Full restart          | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | UI restart            | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Data wipe             | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Swift Package Manager | – | ✅ | ✅ | – | – | – |
 
-On the web, both restart types reload the page, and the data wipe clears browser storage.
+On the web, both restart types reload the page.
 
 ## Requirements
 
@@ -127,32 +125,6 @@ Keeps the process and rebuilds the Flutter UI from scratch. Every `State` below 
 await FullRestart.restart(type: RestartType.ui);
 ```
 
-### Restart with a data wipe
-
-Typical for logout: clear the user's data, keep app-wide settings.
-
-```dart
-await FullRestart.restart(
-  wipeData: true,
-  keepPreferences: true,    // keep SharedPreferences / UserDefaults
-  keepSecureStorage: false, // clear tokens in the keychain
-);
-```
-
-See [What `wipeData` deletes](#what-wipedata-deletes) for the exact folders on each platform.
-
-### Ask the user first
-
-```dart
-final bool restarted = await FullRestart.confirmAndRestart(
-  context,
-  title: 'Update installed',
-  message: 'Restart now to finish updating?',
-  confirmLabel: 'Restart',
-  cancelLabel: 'Later',
-);
-```
-
 ### Handle UI restarts yourself
 
 If you would rather not wrap the app in `FullRestartScope`, register a callback. It runs instead of the automatic rebuild:
@@ -171,20 +143,16 @@ void main() {
 
 | API | Description |
 |-----|-------------|
-| `FullRestart.restart({type, wipeData, keepPreferences, keepSecureStorage})` | Restarts the app. Returns `true` when the platform accepted the request. |
-| `FullRestart.confirmAndRestart(context, {title, message, confirmLabel, cancelLabel, ...})` | Shows an `AlertDialog` and restarts only if the user confirms. Returns `false` when they cancel. |
+| `FullRestart.restart({type})` | Restarts the app. Returns `true` when the platform accepted the request. |
 | `FullRestart.ensureInitialized({onUiRestart})` | Starts listening for UI restarts. Called for you by `FullRestartScope` and `restart`. |
 | `FullRestartScope(child: ...)` | Rebuilds its subtree from scratch on a UI restart. |
 | `RestartType.full` / `RestartType.ui` | Kill and relaunch the process, or rebuild the UI in place. |
 
-Options of `restart` and `confirmAndRestart`:
+Options of `restart`:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `type` | `RestartType.full` | `full` kills the process and cold-starts the app. `ui` rebuilds the UI inside the running process. |
-| `wipeData` | `false` | Delete app data before restarting. |
-| `keepPreferences` | `false` | With `wipeData`: keep SharedPreferences, UserDefaults and localStorage. |
-| `keepSecureStorage` | `false` | With `wipeData`: keep the keychain on iOS and macOS, and sessionStorage and cookies on the web. |
 
 The full API reference is on [pub.dev](https://pub.dev/documentation/flutter_full_restart/latest/).
 
@@ -204,27 +172,6 @@ The full API reference is on [pub.dev](https://pub.dev/documentation/flutter_ful
 - **iOS:** replaces the root `FlutterViewController` on the same engine and rebuilds the widget tree via `FullRestartScope`.
 - **macOS, Windows and Linux:** keep the window and the engine and rebuild the widget tree via `FullRestartScope`.
 - **Web:** reloads the page.
-
-### What `wipeData` deletes
-
-| | Always | Unless `keepPreferences` | Unless `keepSecureStorage` |
-|-|--------|--------------------------|----------------------------|
-| **Android** | cache directory | files directory, `shared_prefs`, all databases | – ¹ |
-| **iOS** | Documents, Caches, tmp, cookies, URL cache | UserDefaults | keychain items |
-| **macOS** | `~/Library/Caches/<bundle id>`, cookies, URL cache; inside the App Sandbox also Documents, Caches and tmp ² | UserDefaults, `~/Library/Application Support/<bundle id>` | the app's items in the data protection keychain ² |
-| **Web** | Cache Storage | localStorage | sessionStorage, cookies |
-| **Windows** | app cache folder `%LOCALAPPDATA%\<company>\<product>` | app support folder `%APPDATA%\<company>\<product>` (where `shared_preferences` keeps its file) | – ³ |
-| **Linux** | app cache folder `~/.cache/<app id>` | app data folder `~/.local/share/<app id>` (where `shared_preferences` keeps its file) | – ⁴ |
-
-IndexedDB on the web is cleared only when neither flag is set.
-
-¹ Android has no keychain. Packages such as `flutter_secure_storage` keep their data in shared preferences, so they are wiped unless `keepPreferences` is set. When `keepPreferences` is set, databases whose name contains `keychain` are kept.
-
-² Outside the App Sandbox, Documents and the temporary folder belong to the user and to other apps, so only the `<bundle id>` folders are cleared. The legacy file-based macOS keychain is shared by all apps and never touched. The system may recreate an empty URL cache database in the cache folder right after the wipe; it contains no data.
-
-³ The Windows Credential Manager is shared by every app of the user, so it is never touched. Neither are shared folders such as Documents or `%TEMP%`. `<company>\<product>` is the same folder `path_provider` returns, taken from the executable's version info.
-
-⁴ The Secret Service keyring used by `flutter_secure_storage` on Linux is shared by every app of the user, so it is never touched. Neither are shared folders such as Documents or `/tmp`. `<app id>` is the folder `path_provider` returns (the GTK application id, or the executable name for older apps), and `$XDG_CACHE_HOME` / `$XDG_DATA_HOME` are respected.
 
 ## Platform setup
 
@@ -246,9 +193,9 @@ A full restart reopens the app through a URL scheme equal to its bundle identifi
 </array>
 ```
 
-Without it, a full restart returns `false` and logs `URL_SCHEME_ERROR`. UI restarts and data wipes work without it.
+Without it, a full restart returns `false` and logs `URL_SCHEME_ERROR`. UI restarts work without it.
 
-Apple discourages apps from quitting on their own. Trigger a full restart only in response to a user action, such as switching language or logging out.
+Apple discourages apps from quitting on their own. Trigger a full restart only in response to a user action, such as switching the language or the backend environment.
 
 ### Swift Package Manager
 
@@ -306,7 +253,7 @@ Wrap the app in `FullRestartScope`, or pass `onUiRestart` to `FullRestart.ensure
 
 ## Example app
 
-The [example app](https://github.com/azerosoft/flutter_full_restart/tree/main/example) shows what survives each kind of restart: the Dart session start time, a counter kept in memory and a counter saved to disk. The animations at the top of this page were recorded with it. It runs on all six platforms.
+The [example app](https://github.com/azerosoft/flutter_full_restart/tree/main/example) shows what each kind of restart resets: the time the Dart session started and the time the screen was built. The animations at the top of this page were recorded with it. It runs on all six platforms.
 
 ```sh
 cd example

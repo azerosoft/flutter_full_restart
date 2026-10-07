@@ -63,11 +63,10 @@ flutter build linux --debug     # then run build/linux/<arch>/debug/plugins/flut
 ## Guidelines
 
 - Keep behaviour the same on every platform unless a platform cannot support it, and document any difference in the README.
-- Never delete data outside the app's own folders. Shared locations (Documents, temp folders, shared keychains) must stay untouched.
 - Add or update tests for every change in behaviour.
 - Keep `flutter analyze` free of issues and the code formatted with `dart format`.
 - Update `README.md` for user-facing changes. `CHANGELOG.md` is written from the commit messages when a version is released, so don't edit it by hand.
-- Write commit messages in the [Conventional Commits](https://www.conventionalcommits.org) style, for example `fix(android): keep databases when keepPreferences is set`. They decide the next version, see [Releasing](#releasing).
+- Write commit messages in the [Conventional Commits](https://www.conventionalcommits.org) style, for example `fix(android): keep the task stack on a UI restart`. They decide the next version, see [Releasing](#releasing).
 
 ## Pull request checklist
 

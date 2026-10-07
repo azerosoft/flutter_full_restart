@@ -15,21 +15,11 @@ class MethodChannelFullRestart extends FullRestartPlatform {
   static const MethodChannel channel = MethodChannel(kCommandChannel);
 
   @override
-  Future<bool> restart({
-    required bool killProcess,
-    required bool wipeData,
-    required bool keepSecureStorage,
-    required bool keepPreferences,
-  }) async {
+  Future<bool> restart({required bool killProcess}) async {
     try {
       final bool? accepted = await channel.invokeMethod<bool>(
         kRestartMethod,
-        <String, bool>{
-          kKillProcessArg: killProcess,
-          kWipeDataArg: wipeData,
-          kKeepSecureStorageArg: keepSecureStorage,
-          kKeepPreferencesArg: keepPreferences,
-        },
+        <String, bool>{kKillProcessArg: killProcess},
       );
       return accepted ?? false;
     } catch (error) {

@@ -8,7 +8,6 @@
 #include <windows.h>
 
 #include <memory>
-#include <optional>
 #include <string>
 #include <variant>
 
@@ -58,7 +57,6 @@ TEST(FlutterFullRestartPlugin, UiRestartSucceedsWithoutKillingTheProcess) {
       MethodCall("restart",
                  std::make_unique<EncodableValue>(EncodableMap{
                      {EncodableValue("killProcess"), EncodableValue(false)},
-                     {EncodableValue("wipeData"), EncodableValue(false)},
                  })),
       std::make_unique<MethodResultFunctions<>>(
           [&accepted](const EncodableValue* result) {
@@ -67,27 +65,6 @@ TEST(FlutterFullRestartPlugin, UiRestartSucceedsWithoutKillingTheProcess) {
           nullptr, nullptr));
 
   EXPECT_TRUE(accepted);
-}
-
-TEST(SanitizeDirectoryName, MatchesPathProviderRules) {
-  EXPECT_EQ(SanitizeDirectoryName(std::nullopt), std::nullopt);
-  EXPECT_EQ(SanitizeDirectoryName(std::wstring(L"")), std::nullopt);
-  EXPECT_EQ(SanitizeDirectoryName(std::wstring(L"...")), std::nullopt);
-  EXPECT_EQ(SanitizeDirectoryName(std::wstring(L"com.example")),
-            std::wstring(L"com.example"));
-  EXPECT_EQ(SanitizeDirectoryName(std::wstring(L"My:App?  ")),
-            std::wstring(L"My_App_"));
-  EXPECT_EQ(SanitizeDirectoryName(std::wstring(L"a/b\\c..")),
-            std::wstring(L"a_b_c"));
-  EXPECT_EQ(SanitizeDirectoryName(std::wstring(300, L'x'))->size(), 255u);
-}
-
-TEST(AppSpecificSubdirectory, IsARelativeFolderOfTheApp) {
-  const std::wstring folder = AppSpecificSubdirectory();
-  ASSERT_FALSE(folder.empty());
-  EXPECT_EQ(folder.find(L".."), std::wstring::npos);
-  EXPECT_EQ(folder.find(L':'), std::wstring::npos);
-  EXPECT_NE(folder.front(), L'\\');
 }
 
 }  // namespace test

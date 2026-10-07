@@ -3,21 +3,15 @@
 
 import 'package:flutter_full_restart_example/main.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('shows the restart buttons', (WidgetTester tester) async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
-
+  testWidgets('shows the times and the restart buttons',
+      (WidgetTester tester) async {
     await tester.pumpWidget(const DemoApp());
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Full restart with confirmation'),
-      200,
-    );
 
+    expect(find.text('Dart session started'), findsOneWidget);
+    expect(find.text('Screen built'), findsOneWidget);
     expect(find.text('UI restart'), findsOneWidget);
     expect(find.text('Full restart'), findsOneWidget);
-    expect(find.text('Full restart with confirmation'), findsOneWidget);
   });
 }

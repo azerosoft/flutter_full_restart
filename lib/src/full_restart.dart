@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See the LICENSE file for details.
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'full_restart_platform.dart';
@@ -19,9 +18,6 @@ import 'restart_type.dart';
 ///
 /// // Keep the process, rebuild the Flutter UI from scratch.
 /// await FullRestart.restart(type: RestartType.ui);
-///
-/// // Log out: wipe app data but keep the user's settings.
-/// await FullRestart.restart(wipeData: true, keepPreferences: true);
 /// ```
 ///
 /// For UI-only restarts, wrap your app in a [FullRestartScope].
@@ -65,78 +61,21 @@ abstract final class FullRestart {
 
   /// Restarts the app.
   ///
-  /// * [type]: [RestartType.full] (default) kills the process and cold-starts
-  ///   the app; [RestartType.ui] rebuilds the UI inside the running process.
-  /// * [wipeData]: delete app data (files, caches, databases, preferences,
-  ///   keychain, cookies) before restarting.
-  /// * [keepSecureStorage]: with [wipeData], keep the keychain on iOS and
-  ///   macOS, and sessionStorage and cookies on the web.
-  /// * [keepPreferences]: with [wipeData], keep preferences such as
-  ///   UserDefaults, SharedPreferences and localStorage.
+  /// [type] is [RestartType.full] (default) to kill the process and
+  /// cold-start the app, or [RestartType.ui] to rebuild the UI inside the
+  /// running process.
   ///
   /// Returns `true` when the platform accepted the request, `false` if the
   /// restart could not be started. Errors are logged, never thrown.
-  static Future<bool> restart({
-    RestartType type = RestartType.full,
-    bool wipeData = false,
-    bool keepSecureStorage = false,
-    bool keepPreferences = false,
-  }) async {
+  static Future<bool> restart({RestartType type = RestartType.full}) async {
     ensureInitialized();
     try {
       return await FullRestartPlatform.instance.restart(
         killProcess: type == RestartType.full,
-        wipeData: wipeData,
-        keepSecureStorage: keepSecureStorage,
-        keepPreferences: keepPreferences,
       );
     } catch (error) {
       debugPrint('[flutter_full_restart] restart failed: $error');
       return false;
     }
-  }
-
-  /// Asks the user for confirmation with an [AlertDialog] and restarts only
-  /// if they agree.
-  ///
-  /// The restart options behave exactly like in [restart]. Returns `false`
-  /// when the user cancels or dismisses the dialog.
-  static Future<bool> confirmAndRestart(
-    BuildContext context, {
-    String title = 'Restart required',
-    String message = 'The app needs to restart to apply the changes.',
-    String confirmLabel = 'Restart now',
-    String cancelLabel = 'Later',
-    RestartType type = RestartType.full,
-    bool wipeData = false,
-    bool keepSecureStorage = false,
-    bool keepPreferences = false,
-  }) async {
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext dialogContext) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(cancelLabel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(confirmLabel),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) {
-      return false;
-    }
-    return restart(
-      type: type,
-      wipeData: wipeData,
-      keepSecureStorage: keepSecureStorage,
-      keepPreferences: keepPreferences,
-    );
   }
 }

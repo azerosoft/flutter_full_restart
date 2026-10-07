@@ -38,29 +38,13 @@ public final class FlutterFullRestartPlugin: NSObject, FlutterPlugin {
 
     private func restart(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
-              let killProcess = args["killProcess"] as? Bool,
-              let wipeData = args["wipeData"] as? Bool,
-              let keepSecureStorage = args["keepSecureStorage"] as? Bool,
-              let keepPreferences = args["keepPreferences"] as? Bool else {
+              let killProcess = args["killProcess"] as? Bool else {
             result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments provided", details: nil))
             return
         }
 
-        log("Restart requested (killProcess: \(killProcess), wipeData: \(wipeData))")
-
-        guard wipeData else {
-            performRestart(killProcess: killProcess, result: result)
-            return
-        }
-
-        wipeAppData(keepSecureStorage: keepSecureStorage, keepPreferences: keepPreferences) { [weak self] error in
-            if let error = error {
-                self?.log("Wiping app data failed: \(error)")
-                result(FlutterError(code: "DATA_CLEAR_ERROR", message: error.localizedDescription, details: nil))
-                return
-            }
-            self?.performRestart(killProcess: killProcess, result: result)
-        }
+        log("Restart requested (killProcess: \(killProcess))")
+        performRestart(killProcess: killProcess, result: result)
     }
 
     private func performRestart(killProcess: Bool, result: @escaping FlutterResult) {
@@ -113,103 +97,6 @@ public final class FlutterFullRestartPlugin: NSObject, FlutterPlugin {
         result(true)
         signalChannel.invokeMethod("rebuildWidgetTree", arguments: nil)
         log("UI restart requested")
-    }
-
-    // MARK: - Data wipe
-
-    /// Deletes only data that belongs to this app. Outside the App Sandbox,
-    /// Documents and the temporary folder are shared with other apps, so only
-    /// the `<bundle id>` folders are cleared there.
-    private func wipeAppData(keepSecureStorage: Bool,
-                             keepPreferences: Bool,
-                             completion: @escaping (Error?) -> Void) {
-        let queue = DispatchQueue(label: "com.azerosoft.flutter_full_restart.wipe")
-
-        queue.async {
-            var wipeError: Error?
-            let fileManager = FileManager.default
-            let bundleId = Bundle.main.bundleIdentifier
-            let sandboxed = ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
-
-            if !keepPreferences, let bundleId = bundleId {
-                UserDefaults.standard.removePersistentDomain(forName: bundleId)
-                UserDefaults.standard.synchronize()
-            }
-
-            if !keepSecureStorage {
-                self.deleteKeychainItems()
-            }
-
-            // Clear cookies and the URL cache before deleting the folders. The
-            // system may recreate an empty Cache.db in the cache folder afterwards.
-            HTTPCookieStorage.shared.cookies?.forEach { HTTPCookieStorage.shared.deleteCookie($0) }
-            URLCache.shared.removeAllCachedResponses()
-
-            var folders: [URL] = []
-            if sandboxed {
-                folders += [FileManager.SearchPathDirectory.documentDirectory, .cachesDirectory]
-                    .compactMap { fileManager.urls(for: $0, in: .userDomainMask).first }
-                folders.append(URL(fileURLWithPath: NSTemporaryDirectory()))
-            } else if let bundleId = bundleId,
-                      let caches = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first {
-                folders.append(caches.appendingPathComponent(bundleId))
-            }
-            if !keepPreferences, let bundleId = bundleId,
-               let support = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
-                folders.append(support.appendingPathComponent(bundleId))
-            }
-
-            for folder in folders {
-                do {
-                    try self.deleteContents(of: folder)
-                } catch {
-                    self.log("Could not read \(folder.path): \(error)")
-                    if wipeError == nil {
-                        wipeError = error
-                    }
-                }
-            }
-
-            DispatchQueue.main.async {
-                completion(wipeError)
-            }
-        }
-    }
-
-    /// Deletes everything inside `folder` but keeps the folder itself.
-    private func deleteContents(of folder: URL) throws {
-        let fileManager = FileManager.default
-        guard fileManager.fileExists(atPath: folder.path) else { return }
-        for item in try fileManager.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil, options: []) {
-            do {
-                try fileManager.removeItem(at: item)
-            } catch {
-                log("Could not delete \(item.lastPathComponent): \(error)")
-            }
-        }
-    }
-
-    /// Clears the app's items in the data protection keychain. The legacy
-    /// file-based keychain is shared by all apps of the user and never touched.
-    private func deleteKeychainItems() {
-        guard #available(macOS 10.15, *) else { return }
-        let itemClasses: [CFString] = [
-            kSecClassGenericPassword,
-            kSecClassInternetPassword,
-            kSecClassCertificate,
-            kSecClassKey,
-            kSecClassIdentity,
-        ]
-        for itemClass in itemClasses {
-            let query: [String: Any] = [
-                kSecClass as String: itemClass,
-                kSecUseDataProtectionKeychain as String: true,
-            ]
-            let status = SecItemDelete(query as CFDictionary)
-            if status != errSecSuccess && status != errSecItemNotFound {
-                log("Keychain delete failed for \(itemClass): \(status)")
-            }
-        }
     }
 
     private func log(_ message: @autoclosure () -> String) {

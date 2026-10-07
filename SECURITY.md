@@ -1,6 +1,6 @@
 # Security Policy
 
-`flutter_full_restart` can delete app data, so we take security reports seriously.
+`flutter_full_restart` kills and relaunches app processes, so we take security reports seriously.
 
 ## Supported versions
 

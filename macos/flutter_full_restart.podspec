@@ -10,9 +10,9 @@ pubspec = YAML.load_file(File.join(__dir__, '..', 'pubspec.yaml'))
 Pod::Spec.new do |s|
   s.name             = 'flutter_full_restart'
   s.version          = pubspec['version'].to_s.gsub('+', '-')
-  s.summary          = 'Restart or relaunch a Flutter app, optionally wiping app data.'
+  s.summary          = 'Restart or relaunch a Flutter app.'
   s.description      = <<-DESC
-Full process restart, UI-only restart and optional data wipe for Flutter apps.
+Full process restart and UI-only restart for Flutter apps.
                        DESC
   s.homepage         = 'https://github.com/azerosoft/flutter_full_restart'
   s.license          = { :file => '../LICENSE' }

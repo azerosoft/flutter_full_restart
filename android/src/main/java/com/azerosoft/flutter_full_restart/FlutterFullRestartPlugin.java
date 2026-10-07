@@ -6,15 +6,11 @@ package com.azerosoft.flutter_full_restart;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import java.io.File;
-import java.util.Locale;
 import java.util.Map;
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
@@ -85,33 +81,9 @@ public class FlutterFullRestartPlugin implements FlutterPlugin, MethodChannel.Me
   }
 
   private void restart(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
-    try {
-      final boolean killProcess = flag(call, "killProcess");
-      final boolean wipeData = flag(call, "wipeData");
-      final boolean keepSecureStorage = flag(call, "keepSecureStorage");
-      final boolean keepPreferences = flag(call, "keepPreferences");
-      Log.d(TAG, "Restart requested (killProcess=" + killProcess + ", wipeData=" + wipeData + ")");
+    final boolean killProcess = flag(call, "killProcess");
+    Log.d(TAG, "Restart requested (killProcess=" + killProcess + ")");
 
-      if (!wipeData) {
-        performRestart(killProcess, result);
-        return;
-      }
-
-      try {
-        wipeAppData(keepSecureStorage, keepPreferences);
-      } catch (Exception e) {
-        Log.e(TAG, "Wiping app data failed", e);
-        result.error("DATA_CLEAR_ERROR", e.getMessage(), null);
-        return;
-      }
-      new Handler(Looper.getMainLooper()).post(() -> performRestart(killProcess, result));
-    } catch (Exception e) {
-      Log.e(TAG, "Restart failed", e);
-      result.error("RESTART_ERROR", e.getMessage(), null);
-    }
-  }
-
-  private void performRestart(boolean killProcess, @NonNull MethodChannel.Result result) {
     final Activity current = activity;
     if (current == null) {
       result.error("NO_ACTIVITY", "No activity found to restart", null);
@@ -160,46 +132,6 @@ public class FlutterFullRestartPlugin implements FlutterPlugin, MethodChannel.Me
     result.success(true);
     current.startActivity(intent);
     current.finish();
-  }
-
-  /**
-   * Deletes the cache directory, and unless {@code keepPreferences} is set also the files
-   * directory and shared preferences. Databases are deleted, except those whose name contains
-   * "keychain" when {@code keepPreferences} is set.
-   */
-  private void wipeAppData(boolean keepSecureStorage, boolean keepPreferences) {
-    final Context context = requireContext();
-    final File cacheDir = context.getCacheDir();
-    final File filesDir = context.getFilesDir();
-    final File sharedPrefsDir = new File(context.getApplicationInfo().dataDir, "shared_prefs");
-
-    if (cacheDir.exists()) {
-      deleteRecursively(cacheDir);
-    }
-    if (filesDir.exists() && !keepPreferences) {
-      deleteRecursively(filesDir);
-    }
-    if (sharedPrefsDir.exists() && !keepPreferences) {
-      deleteRecursively(sharedPrefsDir);
-    }
-    for (String database : context.databaseList()) {
-      if (!keepPreferences || !database.toLowerCase(Locale.ROOT).contains("keychain")) {
-        context.deleteDatabase(database);
-      }
-    }
-    Log.d(TAG, "App data wiped (keepSecureStorage=" + keepSecureStorage + ", keepPreferences=" + keepPreferences + ")");
-  }
-
-  private static void deleteRecursively(@NonNull File file) {
-    final File[] children = file.isDirectory() ? file.listFiles() : null;
-    if (children != null) {
-      for (File child : children) {
-        deleteRecursively(child);
-      }
-    }
-    if (!file.delete()) {
-      Log.d(TAG, "Could not delete " + file.getPath());
-    }
   }
 
   @NonNull

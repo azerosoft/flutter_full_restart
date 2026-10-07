@@ -38,31 +38,13 @@ public final class FlutterFullRestartPlugin: NSObject, FlutterPlugin {
 
     private func restart(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
-              let killProcess = args["killProcess"] as? Bool,
-              let wipeData = args["wipeData"] as? Bool,
-              let keepSecureStorage = args["keepSecureStorage"] as? Bool,
-              let keepPreferences = args["keepPreferences"] as? Bool else {
+              let killProcess = args["killProcess"] as? Bool else {
             result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments provided", details: nil))
             return
         }
 
-        log("Restart requested (killProcess: \(killProcess), wipeData: \(wipeData))")
-
-        guard wipeData else {
-            performRestart(killProcess: killProcess, result: result)
-            return
-        }
-
-        wipeAppData(keepSecureStorage: keepSecureStorage, keepPreferences: keepPreferences) { [weak self] error in
-            if let error = error {
-                self?.log("Wiping app data failed: \(error)")
-                result(FlutterError(code: "DATA_CLEAR_ERROR", message: error.localizedDescription, details: nil))
-                return
-            }
-            DispatchQueue.main.async {
-                self?.performRestart(killProcess: killProcess, result: result)
-            }
-        }
+        log("Restart requested (killProcess: \(killProcess))")
+        performRestart(killProcess: killProcess, result: result)
     }
 
     private func performRestart(killProcess: Bool, result: @escaping FlutterResult) {
@@ -166,73 +148,6 @@ public final class FlutterFullRestartPlugin: NSObject, FlutterPlugin {
         }
         // iOS 12 has no scenes; the app delegate owns the only window.
         return UIApplication.shared.delegate?.window ?? nil
-    }
-
-    // MARK: - Data wipe
-
-    private func wipeAppData(keepSecureStorage: Bool,
-                             keepPreferences: Bool,
-                             completion: @escaping (Error?) -> Void) {
-        let queue = DispatchQueue(label: "com.azerosoft.flutter_full_restart.wipe")
-
-        queue.async {
-            var wipeError: Error?
-
-            if !keepPreferences, let bundleId = Bundle.main.bundleIdentifier {
-                UserDefaults.standard.removePersistentDomain(forName: bundleId)
-                UserDefaults.standard.synchronize()
-            }
-
-            if !keepSecureStorage {
-                let itemClasses: [CFString] = [
-                    kSecClassGenericPassword,
-                    kSecClassInternetPassword,
-                    kSecClassCertificate,
-                    kSecClassKey,
-                    kSecClassIdentity,
-                ]
-                for itemClass in itemClasses {
-                    let query: [String: Any] = [kSecClass as String: itemClass]
-                    let status = SecItemDelete(query as CFDictionary)
-                    if status != errSecSuccess && status != errSecItemNotFound {
-                        self.log("Keychain delete failed for \(itemClass): \(status)")
-                    }
-                }
-            }
-
-            do {
-                let fileManager = FileManager.default
-                for directory in [FileManager.SearchPathDirectory.documentDirectory, .cachesDirectory] {
-                    guard let url = fileManager.urls(for: directory, in: .userDomainMask).first else { continue }
-                    for item in try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil, options: []) {
-                        do {
-                            try fileManager.removeItem(at: item)
-                        } catch {
-                            self.log("Could not delete \(item.lastPathComponent): \(error)")
-                        }
-                    }
-                }
-
-                let tmp = NSTemporaryDirectory()
-                for name in try fileManager.contentsOfDirectory(atPath: tmp) {
-                    do {
-                        try fileManager.removeItem(atPath: (tmp as NSString).appendingPathComponent(name))
-                    } catch {
-                        self.log("Could not delete temp file \(name): \(error)")
-                    }
-                }
-            } catch {
-                self.log("Could not read app directories: \(error)")
-                wipeError = error
-            }
-
-            HTTPCookieStorage.shared.cookies?.forEach { HTTPCookieStorage.shared.deleteCookie($0) }
-            URLCache.shared.removeAllCachedResponses()
-
-            DispatchQueue.main.async {
-                completion(wipeError)
-            }
-        }
     }
 
     private func log(_ message: @autoclosure () -> String) {

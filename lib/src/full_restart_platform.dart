@@ -33,20 +33,11 @@ abstract class FullRestartPlatform extends PlatformInterface {
 
   /// Performs the restart.
   ///
-  /// * [killProcess]: `true` for a full process restart, `false` for a
-  ///   UI-only restart.
-  /// * [wipeData]: delete app data before restarting.
-  /// * [keepSecureStorage]: when wiping, keep keychain / secure storage.
-  /// * [keepPreferences]: when wiping, keep preferences (UserDefaults,
-  ///   SharedPreferences, localStorage).
+  /// [killProcess] is `true` for a full process restart and `false` for a
+  /// UI-only restart.
   ///
   /// Completes with `true` once the platform has accepted the request.
-  Future<bool> restart({
-    required bool killProcess,
-    required bool wipeData,
-    required bool keepSecureStorage,
-    required bool keepPreferences,
-  }) {
+  Future<bool> restart({required bool killProcess}) {
     throw UnimplementedError('restart() has not been implemented.');
   }
 }

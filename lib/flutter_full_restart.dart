@@ -5,8 +5,7 @@
 ///
 /// * [FullRestart.restart] kills the process and cold-starts the app
 ///   ([RestartType.full]) or rebuilds the Flutter UI in place
-///   ([RestartType.ui]), optionally wiping app data first.
-/// * [FullRestart.confirmAndRestart] asks the user before restarting.
+///   ([RestartType.ui]).
 /// * [FullRestartScope] wraps your app so a UI restart rebuilds the whole
 ///   widget tree from scratch.
 library;

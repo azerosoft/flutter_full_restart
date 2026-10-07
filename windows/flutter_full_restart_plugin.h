@@ -8,9 +8,6 @@
 #include <flutter/plugin_registrar_windows.h>
 
 #include <memory>
-#include <optional>
-#include <string>
-#include <system_error>
 
 namespace flutter_full_restart {
 
@@ -47,24 +44,6 @@ class FlutterFullRestartPlugin : public flutter::Plugin {
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
       signal_channel_;
 };
-
-// Applies the same rules as path_provider_windows to a VERSIONINFO string so
-// the folder names match the ones used by path_provider and
-// shared_preferences. Returns nullopt for missing or empty names.
-std::optional<std::wstring> SanitizeDirectoryName(
-    const std::optional<std::wstring>& raw);
-
-// The app's own folder below %APPDATA% / %LOCALAPPDATA%, e.g.
-// "com.example\my_app" (company\product from the executable's VERSIONINFO,
-// falling back to the executable name).
-std::wstring AppSpecificSubdirectory();
-
-// Deletes the app's own data folders. The cache folder below %LOCALAPPDATA% is
-// always cleared; the support folder below %APPDATA% (where
-// shared_preferences keeps its file) only when `keep_preferences` is false.
-// Shared locations such as Documents, %TEMP% and the Windows Credential
-// Manager are never touched.
-std::error_code WipeAppData(bool keep_secure_storage, bool keep_preferences);
 
 }  // namespace flutter_full_restart
 
