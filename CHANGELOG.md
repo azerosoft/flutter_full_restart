@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/azerosoft/flutter_full_restart/compare/v1.0.1...v2.0.0) (2026-10-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* `FullRestart.restart()` no longer takes `wipeData`, `keepPreferences` or `keepSecureStorage`, and `FullRestart.confirmAndRestart()` is removed. Clear app data yourself before calling `restart()`, and show your own dialog first if you want the user to confirm. `FullRestartPlatform.restart()` now takes only `killProcess`.
+
+### Features
+
+* make the package restart-only ([5017c64](https://github.com/azerosoft/flutter_full_restart/commit/5017c642782293cf083fea7d5562145a277ea2cc))
+
 ## [1.0.1](https://github.com/azerosoft/flutter_full_restart/compare/v1.0.0...v1.0.1) (2026-10-02)
 
 
