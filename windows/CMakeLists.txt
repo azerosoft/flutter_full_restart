@@ -95,7 +95,14 @@ add_custom_command(TARGET ${TEST_RUNNER} POST_BUILD
   "${FLUTTER_LIBRARY}" $<TARGET_FILE_DIR:${TEST_RUNNER}>
 )
 
-# Enable automatic test discovery.
+# Enable automatic test discovery. By default CMake lists the tests right after
+# the build by starting the test executable, with a 5 second limit; a slow first
+# start on a busy CI runner then fails the whole build. PRE_TEST lists them when
+# ctest runs instead.
 include(GoogleTest)
-gtest_discover_tests(${TEST_RUNNER})
+if(CMAKE_VERSION VERSION_LESS 3.18)
+  gtest_discover_tests(${TEST_RUNNER})
+else()
+  gtest_discover_tests(${TEST_RUNNER} DISCOVERY_MODE PRE_TEST)
+endif()
 endif()
