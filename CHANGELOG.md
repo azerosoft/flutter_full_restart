@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/azerosoft/flutter_full_restart/compare/v2.0.0...v2.1.0) (2026-10-08)
+
+
+### Features
+
+* **ios:** need no setup for a full restart ([beb0bee](https://github.com/azerosoft/flutter_full_restart/commit/beb0bee6d32e5388933cb2075456f2a1c6661544))
+
 ## [2.0.0](https://github.com/azerosoft/flutter_full_restart/compare/v1.0.1...v2.0.0) (2026-10-07)
 
 
