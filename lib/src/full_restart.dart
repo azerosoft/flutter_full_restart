@@ -78,4 +78,28 @@ abstract final class FullRestart {
       return false;
     }
   }
+
+  /// Whether [uri] is the link a full restart reopens the app with.
+  ///
+  /// On iOS, when the app registers its bundle identifier as a URL scheme, a
+  /// full restart reopens the app through `<bundle id>://`. Packages that
+  /// read incoming links themselves, such as `app_links`, report that empty
+  /// link after the restart. Skip it before routing:
+  ///
+  /// ```dart
+  /// AppLinks().uriLinkStream.listen((Uri uri) {
+  ///   if (FullRestart.isRestartLink(uri)) return;
+  ///   router.go(uri.path);
+  /// });
+  /// ```
+  ///
+  /// Returns `true` for a link with a scheme and no host, path, query or
+  /// fragment, and `false` for every other link.
+  static bool isRestartLink(Uri uri) {
+    return uri.hasScheme &&
+        uri.host.isEmpty &&
+        (uri.path.isEmpty || uri.path == '/') &&
+        !uri.hasQuery &&
+        !uri.hasFragment;
+  }
 }

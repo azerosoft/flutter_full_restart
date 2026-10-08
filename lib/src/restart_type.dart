@@ -8,8 +8,10 @@ enum RestartType {
   ///
   /// * Android: relaunches the launcher activity in a new task and exits the
   ///   process.
-  /// * iOS: reopens the app through its own URL scheme and exits. The app
-  ///   must register its bundle identifier as a URL scheme (see README).
+  /// * iOS: starts a new Flutter engine in the running process, so Dart state
+  ///   and plugins start over but native objects are kept. If the app
+  ///   registers its bundle identifier as a URL scheme, it instead reopens
+  ///   the app through that scheme and exits (see README).
   /// * macOS: launches a new instance of the app bundle and exits.
   /// * Web: reloads the page.
   /// * Windows and Linux: start a new instance of the executable with the

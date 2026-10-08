@@ -13,7 +13,7 @@ A small app by [Azerosoft](https://azerosoft.com) that shows what each kind of r
 flutter run
 ```
 
-It runs on Android, iOS, macOS, Web, Windows and Linux. The iOS project already contains the URL scheme needed for a full restart (see `ios/Runner/Info.plist`).
+It runs on Android, iOS, macOS, Web, Windows and Linux. The iOS project registers the optional URL scheme (see `ios/Runner/Info.plist`), so a full restart there restarts the whole process. Remove it to try the setup-free full restart, which starts a new Flutter engine instead.
 
 ## Learn more
 

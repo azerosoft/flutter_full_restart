@@ -53,9 +53,10 @@ await FullRestart.restart(type: RestartType.ui); // rebuild the UI in place
 
 ## Features
 
-- **Full restart.** Kills the process and cold-starts the app, exactly like closing and reopening it.
+- **Full restart.** Kills the process and cold-starts the app, exactly like closing and reopening it. On iOS it starts a new Flutter engine instead, unless you [opt in to a process restart](#ios-restart-the-whole-process-optional).
 - **UI restart.** Keeps the process and rebuilds the whole widget tree from scratch, for example after a language or theme change.
 - **Every platform.** Android, iOS, macOS, Web (including WebAssembly), Windows and Linux.
+- **No setup.** Add the package and call it. No platform needs native code or manifest changes.
 - **Swift Package Manager ready.** iOS and macOS work with Swift Package Manager and CocoaPods, privacy manifest included.
 - **Never throws.** Every call returns `true` or `false`, so a failed restart never crashes your app.
 
@@ -86,7 +87,7 @@ On the web, both restart types reload the page.
 flutter pub add flutter_full_restart
 ```
 
-On iOS, add the URL scheme described in [iOS setup](#ios-setup). The other platforms need no setup.
+No platform needs any setup. On iOS you can register a URL scheme so that a full restart restarts the native process too, see [iOS: restart the whole process](#ios-restart-the-whole-process-optional).
 
 ## Quick start
 
@@ -139,11 +140,25 @@ void main() {
 }
 ```
 
+### Read links with app_links or a similar package
+
+On iOS, when the app registers the [URL scheme](#ios-restart-the-whole-process-optional), a full restart reopens the app through an empty link (`<bundle id>://`). Flutter's own deep linking never sees it, but packages that read links themselves, such as [`app_links`](https://pub.dev/packages/app_links), report it after the restart. Skip it with `FullRestart.isRestartLink`:
+
+```dart
+AppLinks().uriLinkStream.listen((Uri uri) {
+  if (FullRestart.isRestartLink(uri)) return; // the link of a full restart
+  router.go(uri.path); // https://example.com/product/42 -> /product/42
+});
+```
+
+Your other links, with or without the app running, arrive as usual.
+
 ## API overview
 
 | API | Description |
 |-----|-------------|
 | `FullRestart.restart({type})` | Restarts the app. Returns `true` when the platform accepted the request. |
+| `FullRestart.isRestartLink(uri)` | Whether a link is the one a full restart reopens the app with on iOS. Use it to skip that link when you read links yourself. |
 | `FullRestart.ensureInitialized({onUiRestart})` | Starts listening for UI restarts. Called for you by `FullRestartScope` and `restart`. |
 | `FullRestartScope(child: ...)` | Rebuilds its subtree from scratch on a UI restart. |
 | `RestartType.full` / `RestartType.ui` | Kill and relaunch the process, or rebuild the UI in place. |
@@ -161,7 +176,7 @@ The full API reference is on [pub.dev](https://pub.dev/documentation/flutter_ful
 ### `RestartType.full`
 
 - **Android:** starts the launcher activity in a new task and exits the process.
-- **iOS:** opens the app's own URL scheme, moves the app to the background and exits.
+- **iOS:** starts a new Flutter engine in the running process, so `main()` runs again with fresh Dart state. If the app registers its bundle identifier as a URL scheme, it instead reopens the app through that scheme and exits, like the other platforms. See [iOS: restart the whole process](#ios-restart-the-whole-process-optional).
 - **macOS:** launches a new instance of the app bundle and exits.
 - **Windows and Linux:** start a new instance of the executable with the same arguments and exit.
 - **Web:** reloads the page.
@@ -175,9 +190,11 @@ The full API reference is on [pub.dev](https://pub.dev/documentation/flutter_ful
 
 ## Platform setup
 
-### iOS setup
+### iOS: restart the whole process (optional)
 
-A full restart reopens the app through a URL scheme equal to its bundle identifier. Add this to `ios/Runner/Info.plist`:
+iOS works without any setup. There, a full restart starts a new Flutter engine inside the running process: `main()` runs again, all Dart state is gone and every plugin is registered again.
+
+iOS lets an app reopen itself only through its own URL scheme. If the native side should start over too, register your bundle identifier as a URL scheme in `ios/Runner/Info.plist`. A full restart then reopens the app through that scheme and exits the old process, like on the other platforms:
 
 ```xml
 <key>CFBundleURLTypes</key>
@@ -193,9 +210,20 @@ A full restart reopens the app through a URL scheme equal to its bundle identifi
 </array>
 ```
 
-Without it, a full restart returns `false` and logs `URL_SCHEME_ERROR`. UI restarts work without it.
+The plugin keeps the URL it reopens the app with away from Flutter's deep linking, so your router never sees it. If you read links with a package such as `app_links`, skip it as shown in [Read links with app_links](#read-links-with-app_links-or-a-similar-package). Your app's other URLs are not affected.
 
-Apple discourages apps from quitting on their own. Trigger a full restart only in response to a user action, such as switching the language or the backend environment.
+| Full restart on iOS | Without the URL scheme (default) | With the URL scheme |
+|---------------------|----------------------------------|---------------------|
+| What starts over | The Flutter engine, in the same process | The whole process |
+| Dart state and plugins | Reset | Reset |
+| Native state (Swift and Objective-C objects, native SDKs) | Kept | Reset |
+| Your code in `AppDelegate` (for example your own platform channels) | Not run again | Runs again |
+| Downloaded [Shorebird](https://shorebird.dev) patches | Not applied | Applied |
+| What the user sees | The new UI fades in | The home screen for a moment, then the app opens again |
+
+Register the URL scheme if your app keeps state on the native side that must start over, sets up its own platform channels in `AppDelegate`, or uses Shorebird code push: Shorebird applies a patch only when the process restarts. On Android, a full restart always restarts the process, so patches are applied there without any setup.
+
+Apple discourages apps from quitting on their own. With the URL scheme, trigger a full restart only in response to a user action, such as switching the language or the backend environment.
 
 ### Swift Package Manager
 
@@ -206,19 +234,6 @@ Nothing to configure. When Swift Package Manager is enabled (the default in rece
 The Android side is written in Java on purpose: it builds with any Android Gradle Plugin from 7.x to 9.x, with or without the Kotlin Gradle Plugin. No setup is needed.
 
 ## Troubleshooting
-
-<details>
-<summary><b>A back button appears after a full restart on iOS</b></summary>
-
-Flutter's deep linking (on by default since Flutter 3.27) treats the relaunch URL as a navigation to `/` and pushes a second home route. If your app does not use deep links, turn it off in `Info.plist`:
-
-```xml
-<key>FlutterDeepLinkingEnabled</key>
-<false/>
-```
-
-If you do use deep links, make your router treat `/` as "go to the first screen" rather than "push a screen".
-</details>
 
 <details>
 <summary><b>"The iOS deployment target is set to 12.0, but the range of supported deployment target versions is 15.0 to …"</b></summary>

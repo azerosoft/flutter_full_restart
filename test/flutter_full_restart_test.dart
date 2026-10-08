@@ -79,6 +79,30 @@ void main() {
     });
   });
 
+  group('FullRestart.isRestartLink', () {
+    test('accepts the link a full restart reopens the app with', () {
+      expect(
+          FullRestart.isRestartLink(Uri.parse('com.example.app://')), isTrue);
+      expect(
+          FullRestart.isRestartLink(Uri.parse('com.example.app:///')), isTrue);
+    });
+
+    test('rejects every other link', () {
+      for (final String link in <String>[
+        'com.example.app://product/42',
+        'com.example.app:///product',
+        'com.example.app://?tab=2',
+        'com.example.app://#top',
+        'https://example.com',
+        'https://example.com/product/42',
+        '/product/42',
+      ]) {
+        expect(FullRestart.isRestartLink(Uri.parse(link)), isFalse,
+            reason: link);
+      }
+    });
+  });
+
   group('FullRestartScope', () {
     testWidgets('rebuilds its subtree from scratch on a rebuild signal',
         (WidgetTester tester) async {
