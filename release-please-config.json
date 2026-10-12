@@ -6,7 +6,10 @@
   "packages": {
     ".": {
       "package-name": "flutter_full_restart",
-      "changelog-path": "CHANGELOG.md"
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        "README.md"
+      ]
     }
   }
 }
