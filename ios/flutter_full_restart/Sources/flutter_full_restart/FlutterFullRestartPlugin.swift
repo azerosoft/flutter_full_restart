@@ -15,6 +15,15 @@ public final class FlutterFullRestartPlugin: NSObject, FlutterPlugin {
         let instance = FlutterFullRestartPlugin()
         registrar.addMethodCallDelegate(instance, channel: commandChannel)
 
+        // Flutter 3.38 and later warn about plugins that receive application
+        // lifecycle events without conforming to FlutterSceneLifeCycleDelegate.
+        // The scene methods below are implemented, but the protocol does not
+        // exist in older Flutter versions, so it is added at runtime. This must
+        // happen before addApplicationDelegate, which checks for it.
+        if let sceneLifeCycleDelegate = NSProtocolFromString("FlutterSceneLifeCycleDelegate") {
+            _ = class_addProtocol(FlutterFullRestartPlugin.self, sceneLifeCycleDelegate)
+        }
+
         // Receive the URL a full restart reopens the app with, so the plugin can
         // consume it before Flutter's deep linking turns it into a route.
         registrar.addApplicationDelegate(instance)
