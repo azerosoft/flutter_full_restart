@@ -1,5 +1,27 @@
 # Changelog
 
+## [3.0.0](https://github.com/azerosoft/flutter_full_restart/compare/v2.1.0...v3.0.0) (2026-10-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ios:** On iOS a full restart now needs the bundle identifier registered as a URL scheme in Info.plist, see iOS setup in the README. Without it `FullRestart.restart()` restarts nothing, returns `false` and prints a yellow warning with the Info.plist entry to add. Before, it restarted only the Flutter engine.
+* The UI restart is removed. `RestartType`, `FullRestartScope` and `FullRestart.ensureInitialized()` are gone, and `FullRestart.restart()` and `FullRestartPlatform.restart()` take no arguments. Call `FullRestart.restart()` and remove `FullRestartScope` from `runApp`.
+
+### Features
+
+* **ios:** require the bundle identifier as a URL scheme ([c9fef1a](https://github.com/azerosoft/flutter_full_restart/commit/c9fef1ae4a4c5aca36db0c4e708a7e1f574d2c77))
+* remove the UI restart ([c9fef1a](https://github.com/azerosoft/flutter_full_restart/commit/c9fef1ae4a4c5aca36db0c4e708a7e1f574d2c77))
+
+
+### Bug Fixes
+
+* **android:** show the splash screen icon on a restart on Android 12 and later ([c9fef1a](https://github.com/azerosoft/flutter_full_restart/commit/c9fef1ae4a4c5aca36db0c4e708a7e1f574d2c77))
+* **ios, macos:** build with CocoaPods on Xcode versions that no longer support iOS 12 or macOS 10.14 ([c9fef1a](https://github.com/azerosoft/flutter_full_restart/commit/c9fef1ae4a4c5aca36db0c4e708a7e1f574d2c77))
+* **ios, macos:** depend on Flutter's FlutterFramework package with Swift Package Manager on Flutter 3.41 and later ([c9fef1a](https://github.com/azerosoft/flutter_full_restart/commit/c9fef1ae4a4c5aca36db0c4e708a7e1f574d2c77))
+* **ios:** stop flashing the old screen before the launch screen on a restart ([c9fef1a](https://github.com/azerosoft/flutter_full_restart/commit/c9fef1ae4a4c5aca36db0c4e708a7e1f574d2c77))
+* **windows, linux:** wait for the old instance to exit before starting the new one, so single-instance apps restart ([c9fef1a](https://github.com/azerosoft/flutter_full_restart/commit/c9fef1ae4a4c5aca36db0c4e708a7e1f574d2c77))
+
 ## [2.1.0](https://github.com/azerosoft/flutter_full_restart/compare/v2.0.0...v2.1.0) (2026-10-08)
 
 
