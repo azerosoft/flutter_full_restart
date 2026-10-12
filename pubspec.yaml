@@ -1,6 +1,6 @@
 name: flutter_full_restart
 description: >-
-  Restart or relaunch a Flutter app: full process or UI-only restart.
+  Fully restart a Flutter app: kill the process and cold-start it.
   Android, iOS, macOS, Web, Windows, Linux. Swift Package Manager ready.
 version: 2.1.0
 homepage: https://azerosoft.com
@@ -14,11 +14,11 @@ topics:
   - swift-package-manager
 
 screenshots:
-  - description: flutter_full_restart by Azerosoft. Full and UI-only app restarts on every platform.
+  - description: flutter_full_restart by Azerosoft. Full app restarts on every platform.
     path: doc/screenshots/cover.webp
-  - description: UI restart and full restart in the example app on iOS.
+  - description: Full restart in the example app on iOS.
     path: doc/screenshots/ios.webp
-  - description: UI restart and full restart in the example app on Android.
+  - description: Full restart in the example app on Android.
     path: doc/screenshots/android.webp
 
 environment:

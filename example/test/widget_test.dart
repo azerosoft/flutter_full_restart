@@ -5,13 +5,11 @@ import 'package:flutter_full_restart_example/main.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('shows the times and the restart buttons',
+  testWidgets('shows the session time and the restart button',
       (WidgetTester tester) async {
     await tester.pumpWidget(const DemoApp());
 
     expect(find.text('Dart session started'), findsOneWidget);
-    expect(find.text('Screen built'), findsOneWidget);
-    expect(find.text('UI restart'), findsOneWidget);
     expect(find.text('Full restart'), findsOneWidget);
   });
 }

@@ -9,10 +9,12 @@
 // https://github.com/flutter/flutter/issues/88724 for current limitations
 // in the unit-testable API.
 
-// What the plugin does after it has responded to a restart call.
-enum class FlutterFullRestartAction { kNone, kRebuildUi, kExitProcess };
+// Handles a method call on the command channel. For "restart" this starts the
+// new instance and sets `exit_process`; the caller responds, then exits.
+FlMethodResponse* flutter_full_restart_handle_method_call(const gchar* method,
+                                                         bool* exit_process);
 
-// Handles the "restart" method call. For a full restart this starts the new
-// instance and sets `action` to kExitProcess; the caller responds, then exits.
-FlMethodResponse* flutter_full_restart_handle_restart(
-    FlValue* args, FlutterFullRestartAction* action);
+// Called before main() in every process that loads the plugin. If this process
+// was started by a restart, waits until the previous instance has exited, but
+// at most `timeout_ms`. Otherwise returns at once.
+void flutter_full_restart_wait_for_previous_instance(int timeout_ms);

@@ -3,9 +3,9 @@
     "short_name": "Full Restart",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#F6F7F9",
+    "background_color": "#2C55F0",
     "theme_color": "#2C55F0",
-    "description": "flutter_full_restart example by Azerosoft: full and UI-only restarts.",
+    "description": "flutter_full_restart example by Azerosoft: full app restarts.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

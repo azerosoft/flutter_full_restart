@@ -1,11 +1,6 @@
 # flutter_full_restart example
 
-A small app by [Azerosoft](https://azerosoft.com) that shows what each kind of restart resets:
-
-| Shows | Changes after |
-|-------|---------------|
-| **Dart session started** | a full restart, and a UI restart on Android (which boots a new Flutter engine) |
-| **Screen built** | every restart |
+A small app by [Azerosoft](https://azerosoft.com) that shows the time the Dart session started. It changes after every full restart.
 
 ## Run it
 
@@ -13,7 +8,7 @@ A small app by [Azerosoft](https://azerosoft.com) that shows what each kind of r
 flutter run
 ```
 
-It runs on Android, iOS, macOS, Web, Windows and Linux. The iOS project registers the optional URL scheme (see `ios/Runner/Info.plist`), so a full restart there restarts the whole process. Remove it to try the setup-free full restart, which starts a new Flutter engine instead.
+It runs on Android, iOS, macOS, Web, Windows and Linux. The iOS project registers the URL scheme a full restart needs (see `ios/Runner/Info.plist`). Remove it to see the yellow warning the package prints in the debug console when the setup is missing.
 
 ## Learn more
 

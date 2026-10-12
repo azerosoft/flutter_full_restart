@@ -78,6 +78,11 @@ jobs:
             os: macos-15
             xcode: '16.4'
             dependencies: CocoaPods
+          # The last Flutter version with Swift Package Manager support but
+          # without the generated FlutterFramework package.
+          - flutter: '3.38.10'
+            os: macos-latest
+            dependencies: Swift Package Manager
           - flutter: stable
             os: macos-latest
             dependencies: Swift Package Manager
@@ -94,6 +99,8 @@ jobs:
           flutter-version: ${{ matrix.flutter != 'stable' && matrix.flutter || '' }}
       - run: flutter config --no-enable-swift-package-manager
         if: matrix.flutter == 'stable' && matrix.dependencies == 'CocoaPods'
+      - run: flutter config --enable-swift-package-manager
+        if: matrix.flutter != 'stable' && matrix.dependencies == 'Swift Package Manager'
       - run: .github/scripts/recreate_example_platform.sh ios
         if: matrix.flutter != 'stable'
       - run: flutter build ios --simulator --debug
@@ -111,6 +118,11 @@ jobs:
             os: macos-15
             xcode: '16.4'
             dependencies: CocoaPods
+          # The last Flutter version with Swift Package Manager support but
+          # without the generated FlutterFramework package.
+          - flutter: '3.38.10'
+            os: macos-latest
+            dependencies: Swift Package Manager
           - flutter: stable
             os: macos-latest
             dependencies: Swift Package Manager
@@ -127,6 +139,8 @@ jobs:
           flutter-version: ${{ matrix.flutter != 'stable' && matrix.flutter || '' }}
       - run: flutter config --no-enable-swift-package-manager
         if: matrix.flutter == 'stable' && matrix.dependencies == 'CocoaPods'
+      - run: flutter config --enable-swift-package-manager
+        if: matrix.flutter != 'stable' && matrix.dependencies == 'Swift Package Manager'
       - run: .github/scripts/recreate_example_platform.sh macos
         if: matrix.flutter != 'stable'
       - run: flutter build macos --debug

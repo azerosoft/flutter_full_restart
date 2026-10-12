@@ -4,14 +4,16 @@
 package com.azerosoft.flutter_full_restart;
 
 import android.app.Activity;
+import android.app.ActivityOptions;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
+import android.os.Bundle;
 import android.util.Log;
+import android.window.SplashScreen;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-
-import java.util.Map;
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.embedding.engine.plugins.activity.ActivityAware;
@@ -25,7 +27,6 @@ public class FlutterFullRestartPlugin implements FlutterPlugin, MethodChannel.Me
 
   // Keep in sync with lib/src/protocol.dart.
   private static final String COMMAND_CHANNEL = "com.azerosoft.flutter_full_restart/commands";
-  private static final String UI_RESTART_EXTRA = "com.azerosoft.flutter_full_restart.UI_RESTART";
 
   @Nullable private MethodChannel channel;
   @Nullable private Context appContext;
@@ -74,27 +75,21 @@ public class FlutterFullRestartPlugin implements FlutterPlugin, MethodChannel.Me
   @Override
   public void onMethodCall(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
     if ("restart".equals(call.method)) {
-      restart(call, new SingleReply(result));
+      restart(new SingleReply(result));
     } else {
       result.notImplemented();
     }
   }
 
-  private void restart(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
-    final boolean killProcess = flag(call, "killProcess");
-    Log.d(TAG, "Restart requested (killProcess=" + killProcess + ")");
+  private void restart(@NonNull MethodChannel.Result result) {
+    Log.d(TAG, "Restart requested");
 
-    final Activity current = activity;
-    if (current == null) {
+    if (activity == null) {
       result.error("NO_ACTIVITY", "No activity found to restart", null);
       return;
     }
     try {
-      if (killProcess) {
-        relaunchProcess(result);
-      } else {
-        recreateActivity(current, result);
-      }
+      relaunchProcess(result);
     } catch (Exception e) {
       Log.e(TAG, "Restart failed", e);
       result.error("RESTART_ERROR", e.getMessage(), null);
@@ -113,7 +108,7 @@ public class FlutterFullRestartPlugin implements FlutterPlugin, MethodChannel.Me
       }
       final Intent restartIntent = Intent.makeRestartActivityTask(launchIntent.getComponent());
       result.success(true);
-      context.startActivity(restartIntent);
+      context.startActivity(restartIntent, splashScreenOptions());
       Runtime.getRuntime().exit(0);
     } catch (Exception e) {
       Log.e(TAG, "Relaunch failed", e);
@@ -121,17 +116,26 @@ public class FlutterFullRestartPlugin implements FlutterPlugin, MethodChannel.Me
     }
   }
 
-  /** Replaces the current activity with a fresh instance, which boots a new Flutter engine. */
-  private void recreateActivity(@NonNull Activity current, @NonNull MethodChannel.Result result) {
-    final Intent intent = new Intent(current, current.getClass());
-    intent.setFlags(
-        Intent.FLAG_ACTIVITY_NEW_TASK
-            | Intent.FLAG_ACTIVITY_CLEAR_TOP
-            | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-    intent.putExtra(UI_RESTART_EXTRA, true);
-    result.success(true);
-    current.startActivity(intent);
-    current.finish();
+  /**
+   * Android 12+ shows the splash screen icon and branding image only when the launcher starts the
+   * app. An activity the app starts itself gets just the background color, so ask for the icon
+   * explicitly.
+   */
+  @Nullable
+  private static Bundle splashScreenOptions() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      final ActivityOptions options = ActivityOptions.makeBasic();
+      options.setSplashScreenStyle(SplashScreen.SPLASH_SCREEN_STYLE_ICON);
+      return options.toBundle();
+    }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      // Android 12 has no public API for this, but ActivityOptions already reads the style from
+      // this bundle key (ActivityOptions.KEY_SPLASH_SCREEN_STYLE; 1 = SPLASH_SCREEN_STYLE_ICON).
+      final Bundle options = ActivityOptions.makeBasic().toBundle();
+      options.putInt("android.activity.splashScreenStyle", 1);
+      return options;
+    }
+    return null;
   }
 
   @NonNull
@@ -141,15 +145,6 @@ public class FlutterFullRestartPlugin implements FlutterPlugin, MethodChannel.Me
       throw new IllegalStateException("Plugin is not attached to a Flutter engine");
     }
     return context;
-  }
-
-  private static boolean flag(@NonNull MethodCall call, @NonNull String key) {
-    final Object arguments = call.arguments;
-    if (!(arguments instanceof Map)) {
-      return false;
-    }
-    final Object value = ((Map<?, ?>) arguments).get(key);
-    return value instanceof Boolean && (Boolean) value;
   }
 
   /**

@@ -4,8 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_full_restart/flutter_full_restart.dart';
 
-/// Set once per Dart isolate: changes after a full restart (and after a UI
-/// restart on Android, which boots a new Flutter engine).
+/// Set once per Dart isolate: changes after every full restart.
 final DateTime sessionStartedAt = DateTime.now();
 
 /// Azerosoft brand colours.
@@ -13,8 +12,7 @@ const Color azerosoftBlue = Color(0xFF2C55F0);
 const Color azerosoftBlueDark = Color(0xFF7390FF);
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const FullRestartScope(child: DemoApp()));
+  runApp(const DemoApp());
 }
 
 class DemoApp extends StatelessWidget {
@@ -61,24 +59,8 @@ class DemoApp extends StatelessWidget {
   }
 }
 
-class DemoPage extends StatefulWidget {
+class DemoPage extends StatelessWidget {
   const DemoPage({super.key});
-
-  @override
-  State<DemoPage> createState() => _DemoPageState();
-}
-
-class _DemoPageState extends State<DemoPage> {
-  /// Set when this State is created: changes after any kind of restart.
-  final DateTime _screenBuiltAt = DateTime.now();
-
-  Future<void> _restart(RestartType type) async {
-    final bool accepted = await FullRestart.restart(type: type);
-    if (accepted || !mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('The restart could not be started.')),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -118,21 +100,9 @@ class _DemoPageState extends State<DemoPage> {
                     time: sessionStartedAt,
                     highlight: true,
                   ),
-                  const SizedBox(height: 14),
-                  _TimeTile(
-                    icon: Icons.widgets_outlined,
-                    label: 'Screen built',
-                    time: _screenBuiltAt,
-                  ),
                   const SizedBox(height: 32),
                   FilledButton.icon(
-                    onPressed: () => _restart(RestartType.ui),
-                    icon: const Icon(Icons.refresh, size: 26),
-                    label: const Text('UI restart'),
-                  ),
-                  const SizedBox(height: 14),
-                  FilledButton.icon(
-                    onPressed: () => _restart(RestartType.full),
+                    onPressed: FullRestart.restart,
                     icon: const Icon(Icons.power_settings_new, size: 26),
                     label: const Text('Full restart'),
                   ),

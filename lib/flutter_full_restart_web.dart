@@ -10,8 +10,8 @@ import 'src/full_restart_platform.dart';
 
 /// Web implementation of `flutter_full_restart`.
 ///
-/// A browser tab cannot kill its own process, so both restart types reload
-/// the page.
+/// A browser tab cannot kill its own process, so a full restart reloads the
+/// page.
 class FlutterFullRestartWeb extends FullRestartPlatform {
   /// Constructs the web implementation.
   FlutterFullRestartWeb();
@@ -22,11 +22,11 @@ class FlutterFullRestartWeb extends FullRestartPlatform {
   }
 
   @override
-  Future<bool> restart({required bool killProcess}) async {
+  Future<bool> restart() async {
     try {
       // Reload in a microtask so this Future completes first.
       // `location.replace(sameUrl)` does not reload in most browsers, so
-      // both restart types use `reload()`.
+      // use `reload()`.
       scheduleMicrotask(() => web.window.location.reload());
       return true;
     } catch (_) {

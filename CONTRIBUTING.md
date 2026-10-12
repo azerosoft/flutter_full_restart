@@ -43,8 +43,8 @@ flutter run -d <device>
 
 | Path | What it contains |
 |------|------------------|
-| `lib/` | Public Dart API (`FullRestart`, `FullRestartScope`, `RestartType`) and the web implementation |
-| `lib/src/protocol.dart` | Channel, method and argument names shared with the native code |
+| `lib/` | Public Dart API (`FullRestart`) and the web implementation |
+| `lib/src/protocol.dart` | Channel and method names shared with the native code |
 | `android/` | Android implementation (Java) |
 | `ios/`, `macos/` | iOS and macOS implementations (Swift, Swift Package Manager and CocoaPods) |
 | `windows/`, `linux/` | Windows and Linux implementations (C++) with their unit tests in `test/` |
@@ -66,7 +66,7 @@ flutter build linux --debug     # then run build/linux/<arch>/debug/plugins/flut
 - Add or update tests for every change in behaviour.
 - Keep `flutter analyze` free of issues and the code formatted with `dart format`.
 - Update `README.md` for user-facing changes. `CHANGELOG.md` is written from the commit messages when a version is released, so don't edit it by hand.
-- Write commit messages in the [Conventional Commits](https://www.conventionalcommits.org) style, for example `fix(android): keep the task stack on a UI restart`. They decide the next version, see [Releasing](#releasing).
+- Write commit messages in the [Conventional Commits](https://www.conventionalcommits.org) style, for example `fix(android): keep the task stack on a restart`. They decide the next version, see [Releasing](#releasing).
 
 ## Pull request checklist
 

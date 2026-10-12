@@ -11,14 +11,17 @@
 
 namespace flutter_full_restart {
 
+// Called while Windows loads the plugin DLL, before wWinMain. If this process
+// was started by a restart, waits until the previous instance has exited, but
+// at most `timeout_ms`. Otherwise returns at once.
+void WaitForPreviousInstance(unsigned long timeout_ms);
+
 // Windows side of flutter_full_restart.
 class FlutterFullRestartPlugin : public flutter::Plugin {
  public:
   static void RegisterWithRegistrar(flutter::PluginRegistrarWindows* registrar);
 
-  explicit FlutterFullRestartPlugin(
-      std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
-          signal_channel);
+  FlutterFullRestartPlugin();
 
   virtual ~FlutterFullRestartPlugin();
 
@@ -36,13 +39,6 @@ class FlutterFullRestartPlugin : public flutter::Plugin {
   // exits this process.
   void RelaunchProcess(
       std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
-
-  // Asks Dart to rebuild its widget tree (handled by FullRestartScope).
-  void RebuildUserInterface(
-      std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
-
-  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
-      signal_channel_;
 };
 
 }  // namespace flutter_full_restart

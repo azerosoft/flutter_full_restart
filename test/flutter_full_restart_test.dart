@@ -1,11 +1,10 @@
 // flutter_full_restart by Azerosoft (https://azerosoft.com)
 // Licensed under the MIT License. See the LICENSE file for details.
 
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_full_restart/flutter_full_restart.dart';
 import 'package:flutter_full_restart/src/method_channel_full_restart.dart';
-import 'package:flutter_full_restart/src/protocol.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -31,36 +30,40 @@ void main() {
         .setMockMethodCallHandler(MethodChannelFullRestart.channel, null);
   });
 
-  /// Simulates the native side asking Dart to rebuild its widget tree.
-  Future<void> sendRebuildSignal() async {
-    await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .handlePlatformMessage(
-      kSignalChannel,
-      const StandardMethodCodec()
-          .encodeMethodCall(const MethodCall(kRebuildWidgetTreeSignal)),
-      (_) {},
-    );
-  }
-
   group('FullRestart.restart', () {
-    test('defaults to a full restart', () async {
+    test('asks the native side for a full restart', () async {
       expect(await FullRestart.restart(), isTrue);
 
       expect(calls, hasLength(1));
       expect(calls.single.method, 'restart');
-      expect(calls.single.arguments, <String, bool>{'killProcess': true});
-    });
-
-    test('keeps the process for a UI restart', () async {
-      expect(await FullRestart.restart(type: RestartType.ui), isTrue);
-
-      expect(calls.single.arguments, <String, bool>{'killProcess': false});
+      expect(calls.single.arguments, isNull);
     });
 
     test('returns false when the platform throws', () async {
       reply = (_) => throw PlatformException(code: 'NO_ACTIVITY');
 
       expect(await FullRestart.restart(), isFalse);
+    });
+
+    test('prints the native explanation in yellow when setup is missing',
+        () async {
+      reply = (_) => throw PlatformException(
+            code: 'URL_SCHEME_MISSING',
+            message: 'Full restart is not available on iOS.\nAdd the scheme.',
+          );
+      final List<String?> printed = <String?>[];
+      final DebugPrintCallback originalDebugPrint = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) => printed.add(message);
+      try {
+        expect(await FullRestart.restart(), isFalse);
+      } finally {
+        debugPrint = originalDebugPrint;
+      }
+
+      expect(printed, <String>[
+        '\x1B[33m[flutter_full_restart] Full restart is not available on iOS.\x1B[0m',
+        '\x1B[33m[flutter_full_restart] Add the scheme.\x1B[0m',
+      ]);
     });
 
     test('returns false when the platform replies with null', () async {
@@ -74,7 +77,7 @@ void main() {
       FullRestartPlatform.instance = fake;
 
       expect(await FullRestart.restart(), isTrue);
-      expect(fake.killProcess, isTrue);
+      expect(fake.restarts, 1);
       expect(calls, isEmpty);
     });
   });
@@ -102,64 +105,14 @@ void main() {
       }
     });
   });
-
-  group('FullRestartScope', () {
-    testWidgets('rebuilds its subtree from scratch on a rebuild signal',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(const FullRestartScope(child: _Counter()));
-      await tester.tap(find.byType(_Counter));
-      await tester.pump();
-      expect(find.text('1'), findsOneWidget);
-
-      await sendRebuildSignal();
-      await tester.pump();
-
-      expect(find.text('0'), findsOneWidget);
-    });
-
-    // Registers a global callback, so it must stay the last test.
-    testWidgets('calls onUiRestart instead of rebuilding when provided',
-        (WidgetTester tester) async {
-      int callbacks = 0;
-      FullRestart.ensureInitialized(onUiRestart: () => callbacks++);
-      await tester.pumpWidget(const FullRestartScope(child: _Counter()));
-      await tester.tap(find.byType(_Counter));
-      await tester.pump();
-
-      await sendRebuildSignal();
-      await tester.pump();
-
-      expect(callbacks, 1);
-      expect(find.text('1'), findsOneWidget);
-    });
-  });
 }
 
 class _FakePlatform extends FullRestartPlatform {
-  bool? killProcess;
+  int restarts = 0;
 
   @override
-  Future<bool> restart({required bool killProcess}) async {
-    this.killProcess = killProcess;
+  Future<bool> restart() async {
+    restarts++;
     return true;
-  }
-}
-
-class _Counter extends StatefulWidget {
-  const _Counter();
-
-  @override
-  State<_Counter> createState() => _CounterState();
-}
-
-class _CounterState extends State<_Counter> {
-  int _taps = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => setState(() => _taps++),
-      child: Text('$_taps', textDirection: TextDirection.ltr),
-    );
   }
 }

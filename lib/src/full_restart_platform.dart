@@ -31,13 +31,10 @@ abstract class FullRestartPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  /// Performs the restart.
-  ///
-  /// [killProcess] is `true` for a full process restart and `false` for a
-  /// UI-only restart.
+  /// Kills the process and cold-starts the app.
   ///
   /// Completes with `true` once the platform has accepted the request.
-  Future<bool> restart({required bool killProcess}) {
+  Future<bool> restart() {
     throw UnimplementedError('restart() has not been implemented.');
   }
 }

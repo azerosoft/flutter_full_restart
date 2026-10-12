@@ -9,14 +9,5 @@
 /// Dart -> native: restart requests.
 const String kCommandChannel = 'com.azerosoft.flutter_full_restart/commands';
 
-/// Native -> Dart: notifications sent while a restart is in progress.
-const String kSignalChannel = 'com.azerosoft.flutter_full_restart/signals';
-
-/// Method on [kCommandChannel] that performs a restart.
+/// Method on [kCommandChannel] that performs a full restart.
 const String kRestartMethod = 'restart';
-
-/// Method on [kSignalChannel] asking Dart to rebuild its widget tree.
-const String kRebuildWidgetTreeSignal = 'rebuildWidgetTree';
-
-/// Argument of [kRestartMethod]: `true` for a full restart.
-const String kKillProcessArg = 'killProcess';

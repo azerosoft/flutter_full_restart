@@ -8,20 +8,11 @@ import UIKit
 public final class FlutterFullRestartPlugin: NSObject, FlutterPlugin {
     // Keep in sync with lib/src/protocol.dart.
     private static let commandChannelName = "com.azerosoft.flutter_full_restart/commands"
-    private static let signalChannelName = "com.azerosoft.flutter_full_restart/signals"
-
-    private let signalChannel: FlutterMethodChannel
-
-    private init(signalChannel: FlutterMethodChannel) {
-        self.signalChannel = signalChannel
-        super.init()
-    }
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let messenger = registrar.messenger()
         let commandChannel = FlutterMethodChannel(name: commandChannelName, binaryMessenger: messenger)
-        let signalChannel = FlutterMethodChannel(name: signalChannelName, binaryMessenger: messenger)
-        let instance = FlutterFullRestartPlugin(signalChannel: signalChannel)
+        let instance = FlutterFullRestartPlugin()
         registrar.addMethodCallDelegate(instance, channel: commandChannel)
 
         // Receive the URL a full restart reopens the app with, so the plugin can
@@ -38,7 +29,7 @@ public final class FlutterFullRestartPlugin: NSObject, FlutterPlugin {
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "restart":
-            restart(call, result: result)
+            restart(result: result)
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -100,33 +91,40 @@ public final class FlutterFullRestartPlugin: NSObject, FlutterPlugin {
 
     // MARK: - Restart
 
-    private func restart(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any],
-              let killProcess = args["killProcess"] as? Bool else {
-            result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments provided", details: nil))
-            return
-        }
+    // Shown in the debug console (in yellow, by the Dart side) when the app
+    // does not register its bundle identifier as a URL scheme.
+    private static let urlSchemeMissingMessage = """
+        Full restart is not available on iOS: Info.plist does not register the bundle identifier as a URL scheme.
+        iOS lets an app reopen itself only through its own URL scheme, so nothing was restarted.
+        Add this to ios/Runner/Info.plist and rebuild the app:
+          <key>CFBundleURLTypes</key>
+          <array>
+            <dict>
+              <key>CFBundleURLName</key>
+              <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+              <key>CFBundleURLSchemes</key>
+              <array>
+                <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+              </array>
+            </dict>
+          </array>
+        See https://pub.dev/packages/flutter_full_restart#ios-setup
+        """
 
-        log("Restart requested (killProcess: \(killProcess))")
-        performRestart(killProcess: killProcess, result: result)
-    }
-
-    private func performRestart(killProcess: Bool, result: @escaping FlutterResult) {
+    private func restart(result: @escaping FlutterResult) {
         guard Thread.isMainThread else {
             DispatchQueue.main.async { [weak self] in
-                self?.performRestart(killProcess: killProcess, result: result)
+                self?.restart(result: result)
             }
             return
         }
 
-        if !killProcess {
-            rebuildUserInterface(result: result)
-        } else if let url = Self.ownSchemeURL() {
-            relaunchProcess(url: url, result: result)
-        } else {
-            log("Info.plist does not register the bundle identifier as a URL scheme, so the Flutter engine is restarted instead of the process. See the README to restart the process.")
-            restartEngine(result: result)
+        log("Restart requested")
+        guard let url = Self.ownSchemeURL() else {
+            result(FlutterError(code: "URL_SCHEME_MISSING", message: Self.urlSchemeMissingMessage, details: nil))
+            return
         }
+        relaunchProcess(url: url, result: result)
     }
 
     /// `<bundle id>://` when Info.plist registers the bundle identifier as a URL
@@ -146,8 +144,9 @@ public final class FlutterFullRestartPlugin: NSObject, FlutterPlugin {
     /// Reopens the app through its own URL scheme, then exits the process.
     private func relaunchProcess(url: URL, result: @escaping FlutterResult) {
         guard UIApplication.shared.canOpenURL(url) else {
-            log("Cannot open \(url), so the Flutter engine is restarted instead of the process.")
-            restartEngine(result: result)
+            result(FlutterError(code: "URL_SCHEME_NOT_OPENABLE",
+                                message: "Full restart is not available on iOS: the system cannot open \(url), so nothing was restarted. Check the CFBundleURLTypes entry in ios/Runner/Info.plist.",
+                                details: nil))
             return
         }
 
@@ -166,104 +165,29 @@ public final class FlutterFullRestartPlugin: NSObject, FlutterPlugin {
         // Send the app to the background, then exit once the URL has been handed off.
         UIControl().sendAction(#selector(URLSessionTask.suspend), to: UIApplication.shared, for: nil)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            Self.removeSnapshots()
             exit(0)
         }
     }
 
-    /// Starts a new Flutter engine and shows it in place of the running one. The
-    /// new engine runs `main()` again with fresh Dart state and registers all
-    /// plugins again; native state in the process is kept. Used for a full
-    /// restart when the app cannot reopen itself through a URL scheme.
-    private func restartEngine(result: @escaping FlutterResult) {
-        guard let window = Self.keyWindow(),
-              let current = window.rootViewController as? FlutterViewController else {
-            result(FlutterError(code: "NOT_FLUTTER_VC", message: "Root view controller is not a FlutterViewController", details: nil))
+    /// Deletes the app switcher snapshots iOS keeps in
+    /// `Library/SplashBoard/Snapshots/sceneID:<bundle id>-default/`. Once the
+    /// app has been in the background, iOS shows such a snapshot (the old UI)
+    /// for a moment when the relaunched app starts, before the launch screen.
+    /// `ignoreSnapshotOnNextApplicationLaunch()` does not prevent it. The launch
+    /// screen images in the same folder are kept.
+    private static func removeSnapshots() {
+        let fileManager = FileManager.default
+        guard let library = fileManager.urls(for: .libraryDirectory, in: .userDomainMask).first else {
             return
         }
-        // Every Flutter iOS app has this generated class; it registers the
-        // app's plugins on an engine.
-        let registerSelector = NSSelectorFromString("registerWithRegistry:")
-        guard let registrant = NSClassFromString("GeneratedPluginRegistrant") as AnyObject?,
-              registrant.responds(to: registerSelector) else {
-            result(FlutterError(code: "NO_PLUGIN_REGISTRANT",
-                                message: "GeneratedPluginRegistrant not found. Register the bundle identifier as a URL scheme in Info.plist for a full restart",
-                                details: nil))
+        let snapshots = library.appendingPathComponent("SplashBoard/Snapshots", isDirectory: true)
+        guard let entries = try? fileManager.contentsOfDirectory(at: snapshots, includingPropertiesForKeys: nil) else {
             return
         }
-
-        let engine = FlutterEngine(name: "flutter_full_restart", project: nil, allowHeadlessExecution: true)
-        guard engine.run() else {
-            result(FlutterError(code: "ENGINE_START_FAILED", message: "Could not start a new Flutter engine", details: nil))
-            return
+        for entry in entries where entry.lastPathComponent.hasPrefix("sceneID:") {
+            try? fileManager.removeItem(at: entry)
         }
-        _ = registrant.perform(registerSelector, with: engine)
-
-        result(true)
-
-        // `engine` is optional on older Flutter versions and non-optional on newer ones.
-        let oldEngine = current.engine as FlutterEngine?
-        let replacement = FlutterViewController(engine: engine, nibName: nil, bundle: nil)
-        window.isUserInteractionEnabled = false
-        UIView.transition(with: window,
-                          duration: 0.3,
-                          options: .transitionCrossDissolve,
-                          animations: { window.rootViewController = replacement },
-                          completion: { _ in
-                              window.isUserInteractionEnabled = true
-                              // Stops the old Dart isolate and frees the old engine.
-                              oldEngine?.destroyContext()
-                              self.log("Flutter engine restarted")
-                          })
-    }
-
-    /// Replaces the root FlutterViewController with a new one on the same engine
-    /// and asks Dart to rebuild its widget tree.
-    private func rebuildUserInterface(result: @escaping FlutterResult) {
-        guard let window = Self.keyWindow() else {
-            result(FlutterError(code: "NO_WINDOW", message: "No window found", details: nil))
-            return
-        }
-        guard let rootViewController = window.rootViewController else {
-            result(FlutterError(code: "NO_ROOT_VC", message: "No root view controller found", details: nil))
-            return
-        }
-        guard let flutterViewController = rootViewController as? FlutterViewController else {
-            result(FlutterError(code: "NOT_FLUTTER_VC", message: "Root view controller is not a FlutterViewController", details: nil))
-            return
-        }
-        // `engine` is optional on older Flutter versions and non-optional on newer ones.
-        guard let engine = flutterViewController.engine as FlutterEngine? else {
-            result(FlutterError(code: "NO_ENGINE", message: "The FlutterViewController has no engine", details: nil))
-            return
-        }
-
-        result(true)
-
-        window.isUserInteractionEnabled = false
-        // The new view controller reuses the running engine. Starting a second
-        // engine here is not safe.
-        let replacement = FlutterViewController(engine: engine, nibName: nil, bundle: nil)
-
-        UIView.transition(with: window,
-                          duration: 0.3,
-                          options: .transitionCrossDissolve,
-                          animations: { window.rootViewController = replacement },
-                          completion: { _ in
-                              window.isUserInteractionEnabled = true
-                              self.signalChannel.invokeMethod("rebuildWidgetTree", arguments: nil)
-                              self.log("UI restart completed")
-                          })
-    }
-
-    private static func keyWindow() -> UIWindow? {
-        if #available(iOS 13.0, *) {
-            return UIApplication.shared.connectedScenes
-                .compactMap { $0 as? UIWindowScene }
-                .flatMap { $0.windows }
-                .first { $0.isKeyWindow }
-        }
-        // iOS 12 has no scenes; the app delegate owns the only window.
-        return UIApplication.shared.delegate?.window ?? nil
     }
 
     private func log(_ message: @autoclosure () -> String) {

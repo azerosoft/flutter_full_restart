@@ -18,7 +18,7 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="flutter_full_restart example by Azerosoft: full and UI-only restarts.">
+  <meta name="description" content="flutter_full_restart example by Azerosoft: full app restarts.">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -31,8 +31,53 @@
 
   <title>Flutter Full Restart · Azerosoft</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Splash screen shown while Flutter loads; removed on the first frame. -->
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background-color: #2C55F0;
+    }
+
+    #splash {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #2C55F0;
+    }
+
+    #splash-logo {
+      width: 130px;
+      height: 130px;
+    }
+
+    #splash-branding {
+      position: absolute;
+      bottom: 48px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100px;
+      height: 28px;
+    }
+  </style>
 </head>
 <body>
+  <div id="splash">
+    <img id="splash-logo" src="splash/img/splash-1x.png"
+         srcset="splash/img/splash-1x.png 1x, splash/img/splash-2x.png 2x, splash/img/splash-3x.png 3x"
+         alt="">
+    <img id="splash-branding" src="splash/img/branding-1x.png"
+         srcset="splash/img/branding-1x.png 1x, splash/img/branding-2x.png 2x, splash/img/branding-3x.png 3x"
+         alt="Azerosoft">
+  </div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      document.getElementById('splash')?.remove();
+    });
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

@@ -1,90 +1,47 @@
 // flutter_full_restart by Azerosoft (https://azerosoft.com)
 // Licensed under the MIT License. See the LICENSE file for details.
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-
 import 'full_restart_platform.dart';
-import 'full_restart_scope.dart';
-import 'protocol.dart';
-import 'rebuild_signal.dart';
-import 'restart_type.dart';
+import 'log.dart';
 
 /// Restarts the running app.
 ///
 /// ```dart
 /// // Kill the process and start the app again (cold start).
 /// await FullRestart.restart();
-///
-/// // Keep the process, rebuild the Flutter UI from scratch.
-/// await FullRestart.restart(type: RestartType.ui);
 /// ```
-///
-/// For UI-only restarts, wrap your app in a [FullRestartScope].
 abstract final class FullRestart {
-  static const MethodChannel _signals = MethodChannel(kSignalChannel);
-
-  static bool _listening = false;
-  static VoidCallback? _onUiRestart;
-
-  /// Starts listening for rebuild requests from the native side.
+  /// Kills the process and cold-starts the app, exactly like closing and
+  /// reopening it.
   ///
-  /// You rarely need to call this: [FullRestartScope] and [restart] do it
-  /// for you. Call it yourself (after `WidgetsFlutterBinding.ensureInitialized()`)
-  /// when you want to handle UI restarts on your own through [onUiRestart]
-  /// instead of wrapping the app in a [FullRestartScope].
-  ///
-  /// Safe to call more than once. A non-null [onUiRestart] replaces the
-  /// previously registered callback.
-  static void ensureInitialized({VoidCallback? onUiRestart}) {
-    if (onUiRestart != null) {
-      _onUiRestart = onUiRestart;
-    }
-    if (_listening || kIsWeb) {
-      return;
-    }
-    _signals.setMethodCallHandler(_handleSignal);
-    _listening = true;
-  }
-
-  static Future<void> _handleSignal(MethodCall call) async {
-    if (call.method != kRebuildWidgetTreeSignal) {
-      return;
-    }
-    final VoidCallback? onUiRestart = _onUiRestart;
-    if (onUiRestart != null) {
-      onUiRestart();
-    } else {
-      widgetTreeGeneration.value++;
-    }
-  }
-
-  /// Restarts the app.
-  ///
-  /// [type] is [RestartType.full] (default) to kill the process and
-  /// cold-start the app, or [RestartType.ui] to rebuild the UI inside the
-  /// running process.
+  /// * Android: relaunches the launcher activity in a new task and exits the
+  ///   process.
+  /// * iOS: reopens the app through its own URL scheme and exits the process.
+  ///   The app must register its bundle identifier as a URL scheme in
+  ///   Info.plist (see the README). Without it nothing happens and a yellow
+  ///   warning in the debug console explains the setup.
+  /// * macOS: launches a new instance of the app bundle and exits.
+  /// * Windows and Linux: start a new instance of the executable with the
+  ///   same arguments and exit.
+  /// * Web: reloads the page.
   ///
   /// Returns `true` when the platform accepted the request, `false` if the
-  /// restart could not be started. Errors are logged, never thrown.
-  static Future<bool> restart({RestartType type = RestartType.full}) async {
-    ensureInitialized();
+  /// restart could not be started. The reason is printed to the debug
+  /// console in yellow, never thrown.
+  static Future<bool> restart() async {
     try {
-      return await FullRestartPlatform.instance.restart(
-        killProcess: type == RestartType.full,
-      );
+      return await FullRestartPlatform.instance.restart();
     } catch (error) {
-      debugPrint('[flutter_full_restart] restart failed: $error');
+      logWarning('Restart failed: $error');
       return false;
     }
   }
 
   /// Whether [uri] is the link a full restart reopens the app with.
   ///
-  /// On iOS, when the app registers its bundle identifier as a URL scheme, a
-  /// full restart reopens the app through `<bundle id>://`. Packages that
-  /// read incoming links themselves, such as `app_links`, report that empty
-  /// link after the restart. Skip it before routing:
+  /// On iOS a full restart reopens the app through `<bundle id>://`.
+  /// Packages that read incoming links themselves, such as `app_links`,
+  /// report that empty link after the restart. Skip it before routing:
   ///
   /// ```dart
   /// AppLinks().uriLinkStream.listen((Uri uri) {

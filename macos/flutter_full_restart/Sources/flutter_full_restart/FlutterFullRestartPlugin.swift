@@ -8,52 +8,25 @@ import FlutterMacOS
 public final class FlutterFullRestartPlugin: NSObject, FlutterPlugin {
     // Keep in sync with lib/src/protocol.dart.
     private static let commandChannelName = "com.azerosoft.flutter_full_restart/commands"
-    private static let signalChannelName = "com.azerosoft.flutter_full_restart/signals"
-
-    private let signalChannel: FlutterMethodChannel
-
-    private init(signalChannel: FlutterMethodChannel) {
-        self.signalChannel = signalChannel
-        super.init()
-    }
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let messenger = registrar.messenger
         let commandChannel = FlutterMethodChannel(name: commandChannelName, binaryMessenger: messenger)
-        let signalChannel = FlutterMethodChannel(name: signalChannelName, binaryMessenger: messenger)
-        let instance = FlutterFullRestartPlugin(signalChannel: signalChannel)
+        let instance = FlutterFullRestartPlugin()
         registrar.addMethodCallDelegate(instance, channel: commandChannel)
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "restart":
-            restart(call, result: result)
+            log("Restart requested")
+            relaunchProcess(result: result)
         default:
             result(FlutterMethodNotImplemented)
         }
     }
 
     // MARK: - Restart
-
-    private func restart(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any],
-              let killProcess = args["killProcess"] as? Bool else {
-            result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments provided", details: nil))
-            return
-        }
-
-        log("Restart requested (killProcess: \(killProcess))")
-        performRestart(killProcess: killProcess, result: result)
-    }
-
-    private func performRestart(killProcess: Bool, result: @escaping FlutterResult) {
-        if killProcess {
-            relaunchProcess(result: result)
-        } else {
-            rebuildUserInterface(result: result)
-        }
-    }
 
     /// Launches a new instance of the app bundle, then exits this process.
     private func relaunchProcess(result: @escaping FlutterResult) {
@@ -90,13 +63,6 @@ public final class FlutterFullRestartPlugin: NSObject, FlutterPlugin {
                 finish(error)
             }
         }
-    }
-
-    /// Asks Dart to rebuild its widget tree (handled by FullRestartScope).
-    private func rebuildUserInterface(result: @escaping FlutterResult) {
-        result(true)
-        signalChannel.invokeMethod("rebuildWidgetTree", arguments: nil)
-        log("UI restart requested")
     }
 
     private func log(_ message: @autoclosure () -> String) {

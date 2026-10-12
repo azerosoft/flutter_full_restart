@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'full_restart_platform.dart';
+import 'log.dart';
 import 'protocol.dart';
 
 /// [FullRestartPlatform] implementation for every platform except the web,
@@ -15,15 +16,17 @@ class MethodChannelFullRestart extends FullRestartPlatform {
   static const MethodChannel channel = MethodChannel(kCommandChannel);
 
   @override
-  Future<bool> restart({required bool killProcess}) async {
+  Future<bool> restart() async {
     try {
-      final bool? accepted = await channel.invokeMethod<bool>(
-        kRestartMethod,
-        <String, bool>{kKillProcessArg: killProcess},
-      );
+      final bool? accepted = await channel.invokeMethod<bool>(kRestartMethod);
       return accepted ?? false;
+    } on PlatformException catch (error) {
+      // The native side explains what is missing, for example the URL scheme
+      // on iOS.
+      logWarning(error.message ?? error.code);
+      return false;
     } catch (error) {
-      debugPrint('[flutter_full_restart] native restart failed: $error');
+      logWarning('Native restart failed: $error');
       return false;
     }
   }

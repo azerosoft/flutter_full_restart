@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Azerosoft blue, shared by the launcher icon and the splash screen. -->
+    <color name="ic_launcher_background">#2C55F0</color>
+    <color name="splash_background">#2C55F0</color>
+</resources>

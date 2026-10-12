@@ -10,9 +10,10 @@
 #include <flutter/plugin_registrar_windows.h>
 #include <flutter/standard_method_codec.h>
 
+#include <cstdint>
+#include <cwchar>
 #include <memory>
 #include <string>
-#include <variant>
 #include <vector>
 
 namespace flutter_full_restart {
@@ -22,11 +23,14 @@ namespace {
 // Keep in sync with lib/src/protocol.dart.
 constexpr char kCommandChannel[] =
     "com.azerosoft.flutter_full_restart/commands";
-constexpr char kSignalChannel[] = "com.azerosoft.flutter_full_restart/signals";
 constexpr char kRestartMethod[] = "restart";
-constexpr char kRebuildWidgetTreeSignal[] = "rebuildWidgetTree";
 
-using flutter::EncodableMap;
+// Holds "<handle>:<process id>" of the previous instance in a new instance, see
+// WaitForPreviousInstance.
+constexpr wchar_t kWaitVariable[] = L"FLUTTER_FULL_RESTART_WAIT";
+// How long a new instance waits at most for the previous one to exit.
+constexpr DWORD kWaitTimeoutMs = 5000;
+
 using flutter::EncodableValue;
 using flutter::MethodResult;
 
@@ -34,15 +38,6 @@ void Log(const std::wstring& message) {
 #ifndef NDEBUG
   ::OutputDebugStringW((L"[flutter_full_restart] " + message + L"\n").c_str());
 #endif
-}
-
-bool ReadFlag(const EncodableMap& arguments, const char* key) {
-  const auto it = arguments.find(EncodableValue(key));
-  if (it == arguments.end()) {
-    return false;
-  }
-  const bool* value = std::get_if<bool>(&it->second);
-  return value != nullptr && *value;
 }
 
 std::wstring ModulePath() {
@@ -60,7 +55,94 @@ std::wstring ModulePath() {
   }
 }
 
+// Starts `module_path` with `command_line`. When `wait_handle` is not null, the
+// new process inherits it, and nothing else, and finds it through
+// kWaitVariable.
+bool StartProcess(const std::wstring& module_path, std::wstring command_line,
+                  HANDLE wait_handle, PROCESS_INFORMATION* process_info) {
+  if (wait_handle == nullptr) {
+    STARTUPINFOW startup_info{};
+    startup_info.cb = sizeof(startup_info);
+    // CreateProcessW may modify the command line buffer, so it gets a copy.
+    return ::CreateProcessW(module_path.c_str(), command_line.data(), nullptr,
+                            nullptr, FALSE, 0, nullptr, nullptr, &startup_info,
+                            process_info) != FALSE;
+  }
+
+  SIZE_T list_size = 0;
+  ::InitializeProcThreadAttributeList(nullptr, 1, 0, &list_size);
+  std::vector<unsigned char> list_buffer(list_size);
+  auto* attributes =
+      reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(list_buffer.data());
+  if (list_size == 0 ||
+      !::InitializeProcThreadAttributeList(attributes, 1, 0, &list_size)) {
+    return false;
+  }
+  bool started = false;
+  // Limits inheritance to the wait handle, even though bInheritHandles is TRUE.
+  if (::UpdateProcThreadAttribute(attributes, 0,
+                                  PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+                                  &wait_handle, sizeof(wait_handle), nullptr,
+                                  nullptr)) {
+    const std::wstring value =
+        std::to_wstring(reinterpret_cast<std::uintptr_t>(wait_handle)) + L":" +
+        std::to_wstring(::GetCurrentProcessId());
+    // The new process copies this process's environment when it starts.
+    if (::SetEnvironmentVariableW(kWaitVariable, value.c_str())) {
+      STARTUPINFOEXW startup_info{};
+      startup_info.StartupInfo.cb = sizeof(startup_info);
+      startup_info.lpAttributeList = attributes;
+      started = ::CreateProcessW(module_path.c_str(), command_line.data(),
+                                 nullptr, nullptr, TRUE,
+                                 EXTENDED_STARTUPINFO_PRESENT, nullptr, nullptr,
+                                 &startup_info.StartupInfo,
+                                 process_info) != FALSE;
+      ::SetEnvironmentVariableW(kWaitVariable, nullptr);
+    }
+  }
+  ::DeleteProcThreadAttributeList(attributes);
+  return started;
+}
+
+// Runs once in every process that loads the plugin DLL, while Windows loads
+// it, before wWinMain. It only calls kernel32 functions that are safe under
+// the loader lock: waiting for another process to exit never needs this
+// process's loader lock.
+[[maybe_unused]] const bool kWaitedOnLoad =
+    (WaitForPreviousInstance(kWaitTimeoutMs), true);
+
 }  // namespace
+
+void WaitForPreviousInstance(unsigned long timeout_ms) {
+  wchar_t value[64];
+  const DWORD length = ::GetEnvironmentVariableW(kWaitVariable, value, 64);
+  if (length == 0 || length >= 64) {
+    return;
+  }
+  // Children of this process must not wait again.
+  ::SetEnvironmentVariableW(kWaitVariable, nullptr);
+
+  wchar_t* end = nullptr;
+  const unsigned long long handle_value = std::wcstoull(value, &end, 10);
+  if (end == value || *end != L':') {
+    return;
+  }
+  const wchar_t* pid_text = end + 1;
+  const unsigned long process_id = std::wcstoul(pid_text, &end, 10);
+  if (end == pid_text || *end != L'\0' || process_id == 0 ||
+      process_id == ::GetCurrentProcessId()) {
+    return;
+  }
+  // The value comes from the environment, so only use the handle if it really
+  // is the inherited handle of the previous instance.
+  HANDLE previous_instance =
+      reinterpret_cast<HANDLE>(static_cast<std::uintptr_t>(handle_value));
+  if (::GetProcessId(previous_instance) != process_id) {
+    return;
+  }
+  ::WaitForSingleObject(previous_instance, timeout_ms);
+  ::CloseHandle(previous_instance);
+}
 
 // static
 void FlutterFullRestartPlugin::RegisterWithRegistrar(
@@ -69,13 +151,8 @@ void FlutterFullRestartPlugin::RegisterWithRegistrar(
       std::make_unique<flutter::MethodChannel<EncodableValue>>(
           registrar->messenger(), kCommandChannel,
           &flutter::StandardMethodCodec::GetInstance());
-  auto signal_channel =
-      std::make_unique<flutter::MethodChannel<EncodableValue>>(
-          registrar->messenger(), kSignalChannel,
-          &flutter::StandardMethodCodec::GetInstance());
 
-  auto plugin =
-      std::make_unique<FlutterFullRestartPlugin>(std::move(signal_channel));
+  auto plugin = std::make_unique<FlutterFullRestartPlugin>();
 
   command_channel->SetMethodCallHandler(
       [plugin_pointer = plugin.get()](const auto& call, auto result) {
@@ -85,9 +162,7 @@ void FlutterFullRestartPlugin::RegisterWithRegistrar(
   registrar->AddPlugin(std::move(plugin));
 }
 
-FlutterFullRestartPlugin::FlutterFullRestartPlugin(
-    std::unique_ptr<flutter::MethodChannel<EncodableValue>> signal_channel)
-    : signal_channel_(std::move(signal_channel)) {}
+FlutterFullRestartPlugin::FlutterFullRestartPlugin() {}
 
 FlutterFullRestartPlugin::~FlutterFullRestartPlugin() {}
 
@@ -99,33 +174,36 @@ void FlutterFullRestartPlugin::HandleMethodCall(
     return;
   }
 
-  const auto* arguments = std::get_if<EncodableMap>(method_call.arguments());
-  if (arguments == nullptr) {
-    result->Error("INVALID_ARGS", "Invalid arguments provided");
-    return;
-  }
-
-  if (ReadFlag(*arguments, "killProcess")) {
-    RelaunchProcess(std::move(result));
-  } else {
-    RebuildUserInterface(std::move(result));
-  }
+  RelaunchProcess(std::move(result));
 }
 
 void FlutterFullRestartPlugin::RelaunchProcess(
     std::unique_ptr<MethodResult<EncodableValue>> result) {
   const std::wstring module_path = ModulePath();
-  // CreateProcessW may modify the command line buffer, so pass a copy.
-  std::wstring command_line = ::GetCommandLineW();
+  const std::wstring command_line = ::GetCommandLineW();
 
-  STARTUPINFOW startup_info{};
-  startup_info.cb = sizeof(startup_info);
+  // The new instance waits until this process has exited, so a single instance
+  // check in the app does not see this process. It inherits a handle to this
+  // process for that. If that fails, it starts without waiting.
+  HANDLE wait_handle = nullptr;
+  if (!::DuplicateHandle(::GetCurrentProcess(), ::GetCurrentProcess(),
+                         ::GetCurrentProcess(), &wait_handle,
+                         SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION, TRUE,
+                         0)) {
+    wait_handle = nullptr;
+  }
   PROCESS_INFORMATION process_info{};
-  if (module_path.empty() ||
-      !::CreateProcessW(module_path.c_str(), command_line.data(), nullptr,
-                        nullptr, FALSE, 0, nullptr, nullptr, &startup_info,
-                        &process_info)) {
-    const DWORD error = ::GetLastError();
+  bool started = !module_path.empty() &&
+                 StartProcess(module_path, command_line, wait_handle,
+                              &process_info);
+  if (!started && wait_handle != nullptr && !module_path.empty()) {
+    started = StartProcess(module_path, command_line, nullptr, &process_info);
+  }
+  const DWORD error = started ? ERROR_SUCCESS : ::GetLastError();
+  if (wait_handle != nullptr) {
+    ::CloseHandle(wait_handle);
+  }
+  if (!started) {
     result->Error("RESTART_FAILED",
                   "Could not start a new instance of the app (Windows error " +
                       std::to_string(error) + ")");
@@ -140,14 +218,6 @@ void FlutterFullRestartPlugin::RelaunchProcess(
   result->Success(EncodableValue(true));
   Log(L"New instance started, exiting");
   ::ExitProcess(0);
-}
-
-void FlutterFullRestartPlugin::RebuildUserInterface(
-    std::unique_ptr<MethodResult<EncodableValue>> result) {
-  result->Success(EncodableValue(true));
-  if (signal_channel_) {
-    signal_channel_->InvokeMethod(kRebuildWidgetTreeSignal, nullptr);
-  }
 }
 
 }  // namespace flutter_full_restart
