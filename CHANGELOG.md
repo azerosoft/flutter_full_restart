@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.1](https://github.com/azerosoft/flutter_full_restart/compare/v3.0.0...v3.0.1) (2026-10-12)
+
+
+### Bug Fixes
+
+* **ios:** stop the deprecated application lifecycle events warning ([adbd60c](https://github.com/azerosoft/flutter_full_restart/commit/adbd60cfc049f27bc2d8d5648c653c5ee7ccccf4))
+
 ## [3.0.0](https://github.com/azerosoft/flutter_full_restart/compare/v2.1.0...v3.0.0) (2026-10-12)
 
 

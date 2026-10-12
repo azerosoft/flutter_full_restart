@@ -2,7 +2,7 @@ name: flutter_full_restart
 description: >-
   Fully restart a Flutter app: kill the process and cold-start it.
   Android, iOS, macOS, Web, Windows, Linux. Swift Package Manager ready.
-version: 3.0.0
+version: 3.0.1
 homepage: https://azerosoft.com
 repository: https://github.com/azerosoft/flutter_full_restart
 issue_tracker: https://github.com/azerosoft/flutter_full_restart/issues
