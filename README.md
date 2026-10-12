@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://azerosoft.com">
-    <img src="https://raw.githubusercontent.com/azerosoft/flutter_full_restart/main/.github/assets/banner.png?v=3.0.0" alt="flutter_full_restart by Azerosoft" width="100%"> <!-- x-release-please-version -->
+    <img src="https://raw.githubusercontent.com/azerosoft/flutter_full_restart/main/.github/assets/banner.png?v=3.0.1" alt="flutter_full_restart by Azerosoft" width="100%"> <!-- x-release-please-version -->
   </a>
 </p>
 
@@ -27,8 +27,8 @@ await FullRestart.restart(); // kill the process and cold-start the app
 ```
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/azerosoft/flutter_full_restart/main/.github/assets/demo-ios.webp?v=3.0.0" alt="Full restart on iOS" width="300"> <!-- x-release-please-version -->
-  <img src="https://raw.githubusercontent.com/azerosoft/flutter_full_restart/main/.github/assets/demo-android.webp?v=3.0.0" alt="Full restart on Android" width="300"> <!-- x-release-please-version -->
+  <img src="https://raw.githubusercontent.com/azerosoft/flutter_full_restart/main/.github/assets/demo-ios.webp?v=3.0.1" alt="Full restart on iOS" width="300"> <!-- x-release-please-version -->
+  <img src="https://raw.githubusercontent.com/azerosoft/flutter_full_restart/main/.github/assets/demo-android.webp?v=3.0.1" alt="Full restart on Android" width="300"> <!-- x-release-please-version -->
 </p>
 
 <p align="center"><sub>The example app on iOS and Android.</sub></p>
@@ -281,7 +281,7 @@ Bug reports, ideas and pull requests are welcome. Please read the [contributing 
 ## About Azerosoft
 
 <a href="https://azerosoft.com">
-  <img src="https://raw.githubusercontent.com/azerosoft/flutter_full_restart/main/.github/assets/made-by-azerosoft.png?v=3.0.0" alt="Azerosoft" width="320"> <!-- x-release-please-version -->
+  <img src="https://raw.githubusercontent.com/azerosoft/flutter_full_restart/main/.github/assets/made-by-azerosoft.png?v=3.0.1" alt="Azerosoft" width="320"> <!-- x-release-please-version -->
 </a>
 
 [Azerosoft](https://azerosoft.com) is a design and development studio from Baku, Azerbaijan. We design interfaces and build websites, web and mobile apps, backends, CRM systems and 2D games. We use our packages in our own projects and maintain them for everyone.
