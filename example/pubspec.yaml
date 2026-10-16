@@ -10,6 +10,7 @@ dependencies:
     sdk: flutter
   flutter_full_restart:
     path: ../
+    version: 3.0.1
 
 dev_dependencies:
   flutter_test:
